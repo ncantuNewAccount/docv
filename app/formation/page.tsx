@@ -111,9 +111,11 @@ export default function FormationPage() {
                   </div>
                 </div>
 
-                <Button className="w-full bg-red-600 hover:bg-red-700">
-                  S'inscrire à la formation
-                </Button>
+                <Link href="/formation/devis">
+                  <Button className="w-full bg-red-600 hover:bg-red-700">
+                    S'inscrire à la formation
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
@@ -160,9 +162,11 @@ export default function FormationPage() {
                   </div>
                 </div>
 
-                <Button className="w-full bg-green-600 hover:bg-green-700">
-                  S'inscrire à la formation
-                </Button>
+                <Link href="/formation/devis">
+                  <Button className="w-full bg-green-600 hover:bg-green-700">
+                    S'inscrire à la formation
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
@@ -209,9 +213,11 @@ export default function FormationPage() {
                   </div>
                 </div>
 
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                  S'inscrire à la formation
-                </Button>
+                <Link href="/formation/devis">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    S'inscrire à la formation
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
@@ -265,12 +271,16 @@ export default function FormationPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" className="text-lg px-8">
-                    Parcours Complet (15 jours)
-                  </Button>
-                  <Button variant="outline" size="lg" className="text-lg px-8">
-                    Demander un devis
-                  </Button>
+                  <Link href="/formation/devis">
+                    <Button size="lg" className="text-lg px-8">
+                      Parcours Complet (15 jours)
+                    </Button>
+                  </Link>
+                  <Link href="/formation/devis">
+                    <Button variant="outline" size="lg" className="text-lg px-8">
+                      Demander un devis
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -296,6 +306,13 @@ export default function FormationPage() {
             <p className="text-gray-600">
               Formations disponibles en présentiel, distanciel ou format hybride
             </p>
+            <div className="pt-4">
+              <Link href="/formation/devis">
+                <Button size="lg" className="text-lg px-8">
+                  Demander un devis personnalisé
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>

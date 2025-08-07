@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Shield, Key, Database, Zap, Users, Globe, Lock, CheckCircle, ArrowRight } from 'lucide-react'
+import { Shield, Key, Database, Zap, Users, Globe, Lock, CheckCircle, ArrowRight, Code } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -265,6 +265,77 @@ export default function HomePage() {
                 choisissent DocV, c'est la preuve de la robustesse et de la fiabilité de notre solution.
               </p>
             </div>
+          </div>
+          <div className="mt-16">
+            <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200">
+              <CardHeader className="text-center">
+                <Code className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                <CardTitle className="text-purple-700 text-2xl">🔓 Solutions Open Source</CardTitle>
+                <CardDescription className="text-lg text-gray-700">
+                  Développez vos solutions distribuées avec nos technologies ouvertes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-center">
+                  <p className="text-gray-700 mb-6 text-lg">
+                    DocV met à disposition ses briques technologiques en open source pour permettre 
+                    aux développeurs et organisations de créer leurs propres solutions distribuées et souveraines.
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-white p-4 rounded-lg border border-purple-200">
+                    <h4 className="font-semibold text-purple-800 mb-3">🛠️ Composants disponibles :</h4>
+                    <ul className="space-y-2 text-gray-600">
+                      <li>• Authentification cryptographique</li>
+                      <li>• Gestion d'identité décentralisée</li>
+                      <li>• Chiffrement de bout en bout</li>
+                      <li>• Ancrage blockchain</li>
+                      <li>• APIs souveraines</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-lg border border-purple-200">
+                    <h4 className="font-semibold text-purple-800 mb-3">🎯 Cas d'usage :</h4>
+                    <ul className="space-y-2 text-gray-600">
+                      <li>• Applications métier distribuées</li>
+                      <li>• Plateformes collaboratives sécurisées</li>
+                      <li>• Solutions sectorielles sur-mesure</li>
+                      <li>• Intégrations système existant</li>
+                      <li>• Prototypes et POC</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-100 to-indigo-100 p-6 rounded-lg border border-purple-300">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-purple-800 mb-3 text-lg">
+                      💡 Accompagnement personnalisé
+                    </h4>
+                    <p className="text-gray-700 mb-4">
+                      Notre équipe d'experts vous accompagne dans l'intégration et le développement 
+                      de vos solutions distribuées basées sur nos composants open source.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button className="bg-purple-600 hover:bg-purple-700">
+                        <Code className="h-4 w-4 mr-2" />
+                        Accéder au code source
+                      </Button>
+                      <Button variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                        Contactez-nous pour un projet
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">
+                    <strong>Licence :</strong> Solutions disponibles sous licence open source permissive. 
+                    Support commercial et accompagnement disponibles.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
