@@ -52,7 +52,7 @@ export async function sendContactEmail(data: ContactFormData) {
     }
 
     // Configuration SMTP
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false,
@@ -62,11 +62,14 @@ export async function sendContactEmail(data: ContactFormData) {
       },
     })
 
+    // Adresse de destination explicite
+    const destinationEmail = 'contact@docv.fr'
+    
     const servicesText = data.services.length > 0 ? data.services.join(', ') : 'Aucun service sélectionné'
 
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: destinationEmail, // Adresse explicite
       replyTo: data.email,
       subject: `[DocV] Contact - ${data.nom} ${data.prenom}`,
       html: `
@@ -155,7 +158,9 @@ Message envoyé depuis docv.fr le ${new Date().toLocaleString('fr-FR')}
       `
     }
 
-    console.log('📤 Envoi vers:', mailOptions.to)
+    console.log('📤 Envoi vers:', destinationEmail)
+    console.log('📤 Depuis:', process.env.SMTP_USER)
+    
     const result = await transporter.sendMail(mailOptions)
     console.log('✅ Email contact envoyé:', result.messageId)
     
@@ -163,6 +168,7 @@ Message envoyé depuis docv.fr le ${new Date().toLocaleString('fr-FR')}
 
   } catch (error: any) {
     console.error('❌ Erreur envoi email contact:', error.message)
+    console.error('❌ Stack:', error.stack)
     return { 
       success: false, 
       error: `Erreur d'envoi: ${error.message}` 
@@ -181,7 +187,7 @@ export async function sendFormationEmail(data: FormationFormData) {
     }
 
     // Configuration SMTP
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false,
@@ -191,11 +197,14 @@ export async function sendFormationEmail(data: FormationFormData) {
       },
     })
 
+    // Adresse de destination explicite
+    const destinationEmail = 'contact@docv.fr'
+    
     const formationsText = data.formations.length > 0 ? data.formations.join(', ') : 'Aucune formation sélectionnée'
 
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: destinationEmail, // Adresse explicite
       replyTo: data.email,
       subject: `[DocV] Formation - ${data.entreprise}`,
       html: `
@@ -288,7 +297,9 @@ Message envoyé depuis docv.fr le ${new Date().toLocaleString('fr-FR')}
       `
     }
 
-    console.log('📤 Envoi formation vers:', mailOptions.to)
+    console.log('📤 Envoi formation vers:', destinationEmail)
+    console.log('📤 Depuis:', process.env.SMTP_USER)
+    
     const result = await transporter.sendMail(mailOptions)
     console.log('✅ Email formation envoyé:', result.messageId)
     
@@ -296,6 +307,7 @@ Message envoyé depuis docv.fr le ${new Date().toLocaleString('fr-FR')}
 
   } catch (error: any) {
     console.error('❌ Erreur envoi email formation:', error.message)
+    console.error('❌ Stack:', error.stack)
     return { 
       success: false, 
       error: `Erreur d'envoi: ${error.message}` 
