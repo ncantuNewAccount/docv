@@ -299,8 +299,8 @@ export default function FormationPage() {
           <div className="space-y-4">
             <p className="text-lg">
               <strong>Contact formations :</strong>{" "}
-              <a href="mailto:contact@4nkweb.com" className="text-blue-600 hover:text-blue-700">
-                contact@4nkweb.com
+              <a href="mailto:contact@docv.fr" className="text-blue-600 hover:text-blue-700">
+                contact@docv.fr
               </a>
             </p>
             <p className="text-gray-600">
