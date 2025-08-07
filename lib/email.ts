@@ -60,7 +60,8 @@ function createTransporter() {
     hasPassword: !!config.auth.pass
   })
 
-  return nodemailer.createTransporter(config)
+  // Correction : utiliser la bonne méthode
+  return nodemailer.createTransport(config)
 }
 
 export async function sendContactEmail(data: ContactFormData) {
