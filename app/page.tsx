@@ -397,13 +397,31 @@ export default function HomePage() {
                   </p>
                 </div>
 
+                {/* Nouveau bloc pour les coûts de setup */}
+                <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border border-orange-200">
+                  <h4 className="font-semibold text-orange-800 mb-2">⚙️ Coût de setup initial</h4>
+                  <p className="text-sm text-orange-700 mb-3">
+                    Frais de mise en place unique, calculés selon vos contraintes spécifiques :
+                  </p>
+                  <ul className="text-sm text-orange-600 space-y-1">
+                    <li>• Migration de données existantes</li>
+                    <li>• Intégrations systèmes tiers</li>
+                    <li>• Personnalisations interface</li>
+                    <li>• Formation équipes techniques</li>
+                    <li>• Accompagnement déploiement</li>
+                  </ul>
+                  <p className="text-xs text-orange-600 mt-2 font-medium">
+                    💡 Devis personnalisé selon la complexité de votre environnement
+                  </p>
+                </div>
+
                 <div className="mt-6 text-center">
                   <p className="text-lg font-semibold text-blue-700 mb-4">
-                    Un tarif unique, tout compris, pour un environnement souverain et sécurisé
+                    Un tarif mensuel transparent + setup personnalisé
                   </p>
-                  <Link href="/login">
+                  <Link href="/contact">
                     <Button size="lg" className="w-full">
-                      Commencer maintenant
+                      Obtenir un devis complet
                     </Button>
                   </Link>
                 </div>
