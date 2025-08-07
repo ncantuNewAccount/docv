@@ -367,8 +367,8 @@ export default function HomePage() {
           <div className="max-w-2xl mx-auto">
             <Card className="border-2 border-blue-200 bg-blue-50">
               <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold text-blue-700">2990 € HT</CardTitle>
-                <CardDescription className="text-xl">pour 1000 jetons par mois consommés</CardDescription>
+                <CardTitle className="text-3xl font-bold text-blue-700">Sécurisez votre entreprise avec l'offre découverte</CardTitle>
+                <CardDescription className="text-xl">à 2990 € HT pour 1000 jetons par mois consommés</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
