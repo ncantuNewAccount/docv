@@ -6,13 +6,15 @@
 Configurez ces variables sur votre plateforme de déploiement :
 
 \`\`\`env
-SMTP_HOST=smtp.protonmail.ch
+SMTP_HOST=votre-serveur-smtp
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=contact@docv.fr
-SMTP_PASSWORD=YLRLZ6Z837ZU57BB
-SMTP_FROM=contact@docv.fr
+SMTP_USER=votre-email@domaine.com
+SMTP_PASSWORD=votre-mot-de-passe-application
+SMTP_FROM=votre-email@domaine.com
 \`\`\`
+
+⚠️ **Important** : Utilisez toujours des mots de passe d'application, jamais vos mots de passe principaux.
 
 ## 🌐 Déploiement sur Vercel
 
@@ -75,11 +77,11 @@ CMD ["npm", "start"]
 \`\`\`bash
 docker run -d \
   -p 3000:3000 \
-  -e SMTP_HOST=smtp.protonmail.ch \
+  -e SMTP_HOST=votre-smtp-host \
   -e SMTP_PORT=587 \
-  -e SMTP_USER=contact@docv.fr \
-  -e SMTP_PASSWORD=YLRLZ6Z837ZU57BB \
-  -e SMTP_FROM=contact@docv.fr \
+  -e SMTP_USER=votre-email@domaine.com \
+  -e SMTP_PASSWORD=votre-mot-de-passe \
+  -e SMTP_FROM=votre-email@domaine.com \
   docv-app
 \`\`\`
 
@@ -93,10 +95,10 @@ echo $SMTP_USER
 \`\`\`
 
 ### 2. Test des formulaires
-- Accédez à `/contact`
+- Accédez à \`/contact\`
 - Remplissez et envoyez le formulaire
 - Vérifiez les logs serveur
-- Vérifiez la réception à contact@docv.fr
+- Vérifiez la réception dans votre boîte email
 
 ## 🔍 Debugging
 
@@ -118,18 +120,18 @@ docker logs container-name
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.protonmail.ch',
-  port: 587,
-  secure: false,
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: process.env.SMTP_SECURE === 'true',
   auth: {
-    user: 'contact@docv.fr',
-    pass: 'YLRLZ6Z837ZU57BB',
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
   },
 });
 
 transporter.sendMail({
-  from: 'contact@docv.fr',
-  to: 'contact@docv.fr',
+  from: process.env.SMTP_FROM,
+  to: 'test@example.com',
   subject: 'Test SMTP',
   text: 'Test de configuration SMTP'
 }).then(() => {
@@ -146,29 +148,32 @@ transporter.sendMail({
 - ✅ Configurées sur la plateforme de déploiement
 - ✅ Différentes par environnement (dev/prod)
 
-### 2. Mot de passe d'application
-- ✅ Utilisez un mot de passe d'application Protonmail
-- ✅ Pas le mot de passe principal du compte
-- ✅ Révocable si compromis
+### 2. Mots de passe d'application
+- ✅ Utilisez des mots de passe d'application
+- ✅ Pas les mots de passe principaux des comptes
+- ✅ Révocables si compromis
 
-## 📧 Configuration alternative
+## 📧 Configuration par fournisseur
+
+### Protonmail
+\`\`\`env
+SMTP_HOST=smtp.protonmail.ch
+SMTP_PORT=587
+SMTP_SECURE=false
+\`\`\`
 
 ### Gmail
 \`\`\`env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
 \`\`\`
 
 ### Serveur SMTP dédié
 \`\`\`env
-SMTP_HOST=mail.docv.fr
+SMTP_HOST=mail.votre-domaine.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=contact@docv.fr
-SMTP_PASSWORD=your-password
 \`\`\`
 
 ## 🎯 Résultat attendu
@@ -176,6 +181,14 @@ SMTP_PASSWORD=your-password
 Une fois déployé avec les bonnes variables :
 - ✅ Formulaires fonctionnels
 - ✅ Emails HTML formatés
-- ✅ Réception à contact@docv.fr
+- ✅ Réception dans votre boîte email
 - ✅ Logs de confirmation
 - ✅ Gestion d'erreurs robuste
+
+## 📞 Support
+
+En cas de problème :
+1. Vérifiez les variables d'environnement
+2. Consultez les logs serveur
+3. Testez la configuration SMTP manuellement
+4. Vérifiez les paramètres de votre fournisseur email
