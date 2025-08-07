@@ -41,21 +41,39 @@ export interface FormationFormData {
   accompagnement: boolean
 }
 
-// Fonction pour créer le transporteur email
+// Fonction pour créer le transporteur email avec configuration robuste
 function createEmailTransporter() {
-  return nodemailer.createTransport({
+  const config = {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true pour 465, false pour 587
+    secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
-    // Options supplémentaires pour améliorer la compatibilité
+    // Configuration étendue pour améliorer la compatibilité
     tls: {
-      rejectUnauthorized: false // Accepter les certificats auto-signés si nécessaire
-    }
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    // Timeout plus long pour les connexions lentes
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+    // Options de debug
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development'
+  }
+
+  console.log('📧 Configuration SMTP:', {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.auth.user,
+    hasPassword: !!config.auth.pass
   })
+
+  return nodemailer.createTransport(config)
 }
 
 // Fonction de fallback pour l'environnement de développement
@@ -75,17 +93,50 @@ async function simulateEmailSend(emailData: any, type: 'contact' | 'formation'):
   return { success: true }
 }
 
+// Fonction pour vérifier la configuration SMTP
+async function testSMTPConnection() {
+  try {
+    const transporter = createEmailTransporter()
+    await transporter.verify()
+    console.log('✅ Connexion SMTP vérifiée avec succès')
+    return true
+  } catch (error) {
+    console.error('❌ Erreur de vérification SMTP:', error)
+    return false
+  }
+}
+
 export async function sendContactEmail(data: ContactFormData) {
   try {
     // Vérifier si nous sommes en environnement de production avec configuration SMTP
-    const isProductionReady = process.env.SMTP_HOST && 
-                              process.env.SMTP_USER && 
-                              process.env.SMTP_PASSWORD &&
-                              typeof window === 'undefined' // Vérifier qu'on est côté serveur
+    const hasRequiredEnvVars = process.env.SMTP_HOST && 
+                               process.env.SMTP_USER && 
+                               process.env.SMTP_PASSWORD
+    
+    const isServerSide = typeof window === 'undefined'
 
-    if (!isProductionReady) {
+    console.log('🔍 Vérification environnement:', {
+      hasRequiredEnvVars,
+      isServerSide,
+      nodeEnv: process.env.NODE_ENV,
+      smtpHost: process.env.SMTP_HOST,
+      smtpUser: process.env.SMTP_USER
+    })
+
+    if (!hasRequiredEnvVars || !isServerSide) {
       console.log('🔄 Mode développement - Simulation d\'envoi d\'email')
       return await simulateEmailSend(data, 'contact')
+    }
+
+    // Test de connexion SMTP avant envoi
+    console.log('🔍 Test de connexion SMTP...')
+    const smtpOk = await testSMTPConnection()
+    if (!smtpOk) {
+      console.error('❌ Connexion SMTP échouée')
+      return { 
+        success: false, 
+        error: 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration.' 
+      }
     }
 
     // Configuration pour l'envoi réel
@@ -189,7 +240,6 @@ export async function sendContactEmail(data: ContactFormData) {
       replyTo: data.email,
       subject: `[DocV] 📧 Nouvelle demande de contact - ${data.nom} ${data.prenom}`,
       html: htmlContent,
-      // Version texte pour les clients email qui ne supportent pas HTML
       text: `
 Nouvelle demande de contact - DocV
 
@@ -220,27 +270,67 @@ Message envoyé depuis docv.fr
       `
     }
 
-    await transporter.sendMail(mailOptions)
-    console.log('✅ Email de contact envoyé avec succès à contact@docv.fr')
+    console.log('📤 Tentative d\'envoi email...')
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Email de contact envoyé avec succès:', result.messageId)
     return { success: true }
     
-  } catch (error) {
-    console.error('❌ Erreur envoi email contact:', error)
-    return { success: false, error: 'Erreur lors de l\'envoi de l\'email' }
+  } catch (error: any) {
+    console.error('❌ Erreur détaillée envoi email contact:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: error.stack
+    })
+    
+    // Messages d'erreur plus spécifiques
+    let errorMessage = 'Erreur lors de l\'envoi de l\'email'
+    
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration réseau.'
+    } else if (error.code === 'EAUTH' || error.responseCode === 535) {
+      errorMessage = 'Erreur d\'authentification SMTP. Vérifiez les identifiants.'
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = 'Timeout de connexion SMTP. Le serveur met trop de temps à répondre.'
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Serveur SMTP introuvable. Vérifiez l\'adresse du serveur.'
+    }
+    
+    return { success: false, error: errorMessage }
   }
 }
 
 export async function sendFormationEmail(data: FormationFormData) {
   try {
     // Vérifier si nous sommes en environnement de production avec configuration SMTP
-    const isProductionReady = process.env.SMTP_HOST && 
-                              process.env.SMTP_USER && 
-                              process.env.SMTP_PASSWORD &&
-                              typeof window === 'undefined' // Vérifier qu'on est côté serveur
+    const hasRequiredEnvVars = process.env.SMTP_HOST && 
+                               process.env.SMTP_USER && 
+                               process.env.SMTP_PASSWORD
+    
+    const isServerSide = typeof window === 'undefined'
 
-    if (!isProductionReady) {
+    console.log('🔍 Vérification environnement formation:', {
+      hasRequiredEnvVars,
+      isServerSide,
+      nodeEnv: process.env.NODE_ENV
+    })
+
+    if (!hasRequiredEnvVars || !isServerSide) {
       console.log('🔄 Mode développement - Simulation d\'envoi d\'email formation')
       return await simulateEmailSend(data, 'formation')
+    }
+
+    // Test de connexion SMTP avant envoi
+    console.log('🔍 Test de connexion SMTP pour formation...')
+    const smtpOk = await testSMTPConnection()
+    if (!smtpOk) {
+      console.error('❌ Connexion SMTP échouée pour formation')
+      return { 
+        success: false, 
+        error: 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration.' 
+      }
     }
 
     // Configuration pour l'envoi réel
@@ -381,12 +471,33 @@ Message envoyé depuis docv.fr
       `
     }
 
-    await transporter.sendMail(mailOptions)
-    console.log('✅ Email de formation envoyé avec succès à contact@docv.fr')
+    console.log('📤 Tentative d\'envoi email formation...')
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Email de formation envoyé avec succès:', result.messageId)
     return { success: true }
     
-  } catch (error) {
-    console.error('❌ Erreur envoi email formation:', error)
-    return { success: false, error: 'Erreur lors de l\'envoi de l\'email' }
+  } catch (error: any) {
+    console.error('❌ Erreur détaillée envoi email formation:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
+    })
+    
+    // Messages d'erreur plus spécifiques
+    let errorMessage = 'Erreur lors de l\'envoi de l\'email'
+    
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration réseau.'
+    } else if (error.code === 'EAUTH' || error.responseCode === 535) {
+      errorMessage = 'Erreur d\'authentification SMTP. Vérifiez les identifiants.'
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = 'Timeout de connexion SMTP. Le serveur met trop de temps à répondre.'
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Serveur SMTP introuvable. Vérifiez l\'adresse du serveur.'
+    }
+    
+    return { success: false, error: errorMessage }
   }
 }
