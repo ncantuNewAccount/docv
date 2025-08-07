@@ -393,7 +393,7 @@ export default function HomePage() {
                 <div className="mt-6 p-4 bg-white rounded-lg">
                   <p className="text-sm text-gray-600">
                     <strong>👉 1000 jetons</strong> = 250 Go de documents chiffrés, ancrés, 
-                    classifiés, traçables et auto-vérifiables + 100 nouveaux dossiers maximum au mois.
+                    classifiés, traçables et auto-vérifiables + 75 nouveaux dossiers maximum au mois.
                   </p>
                 </div>
 
