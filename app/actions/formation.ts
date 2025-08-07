@@ -28,7 +28,9 @@ const formationSchema = z.object({
 
 export async function submitFormationForm(formData: FormData) {
   try {
-    // Extraction des données du formulaire
+    console.log('Traitement formulaire formation')
+
+    // Extraction des données
     const rawData = {
       entreprise: (formData.get('entreprise') as string)?.trim() || '',
       secteur: (formData.get('secteur') as string)?.trim() || undefined,
@@ -52,10 +54,10 @@ export async function submitFormationForm(formData: FormData) {
       accompagnement: formData.get('accompagnement') === 'true',
     }
 
-    // Validation des données
+    // Validation
     const validatedData = formationSchema.parse(rawData)
 
-    // Envoi de l'email
+    // Envoi email
     const result = await sendFormationEmail(validatedData as FormationFormData)
 
     if (result.success) {
@@ -66,11 +68,12 @@ export async function submitFormationForm(formData: FormData) {
     } else {
       return { 
         success: false, 
-        message: 'Une erreur est survenue lors de l\'envoi. Veuillez réessayer ou nous contacter directement.' 
+        message: result.error || 'Une erreur est survenue lors de l\'envoi.' 
       }
     }
-  } catch (error) {
-    console.error('Erreur dans submitFormationForm:', error)
+
+  } catch (error: any) {
+    console.error('Erreur formulaire formation:', error.message)
     
     if (error instanceof z.ZodError) {
       const errorMessages = error.errors.map(e => e.message).join(', ')
@@ -82,7 +85,7 @@ export async function submitFormationForm(formData: FormData) {
     
     return { 
       success: false, 
-      message: 'Une erreur inattendue est survenue. Veuillez réessayer.' 
+      message: 'Une erreur inattendue est survenue.' 
     }
   }
 }

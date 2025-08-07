@@ -23,9 +23,9 @@ const contactSchema = z.object({
 
 export async function submitContactForm(formData: FormData) {
   try {
-    // Extraction des données du formulaire avec nettoyage
-    const description = (formData.get('description') as string || '').trim()
-    
+    console.log('Traitement formulaire contact')
+
+    // Extraction des données
     const rawData = {
       nom: (formData.get('nom') as string || '').trim(),
       prenom: (formData.get('prenom') as string || '').trim(),
@@ -36,7 +36,7 @@ export async function submitContactForm(formData: FormData) {
       typeProjet: (formData.get('typeProjet') as string) || undefined,
       budget: (formData.get('budget') as string) || undefined,
       delai: (formData.get('delai') as string) || undefined,
-      description: description,
+      description: (formData.get('description') as string || '').trim(),
       objectifs: (formData.get('objectifs') as string || '').trim() || undefined,
       contraintes: (formData.get('contraintes') as string || '').trim() || undefined,
       services: formData.getAll('services') as string[],
@@ -44,13 +44,10 @@ export async function submitContactForm(formData: FormData) {
       accompagnement: formData.get('accompagnement') === 'true',
     }
 
-    // Debug: log de la description pour vérifier
-    console.log('Description reçue:', JSON.stringify(description), 'Longueur:', description.length)
-
-    // Validation des données
+    // Validation
     const validatedData = contactSchema.parse(rawData)
 
-    // Envoi de l'email
+    // Envoi email
     const result = await sendContactEmail(validatedData as ContactFormData)
 
     if (result.success) {
@@ -61,23 +58,24 @@ export async function submitContactForm(formData: FormData) {
     } else {
       return { 
         success: false, 
-        message: 'Une erreur est survenue lors de l\'envoi. Veuillez réessayer ou nous contacter directement.' 
+        message: result.error || 'Une erreur est survenue lors de l\'envoi.' 
       }
     }
-  } catch (error) {
-    console.error('Erreur dans submitContactForm:', error)
+
+  } catch (error: any) {
+    console.error('Erreur formulaire contact:', error.message)
     
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      const errorMessages = error.errors.map(e => e.message).join(', ')
       return { 
         success: false, 
-        message: `Veuillez vérifier les champs suivants: ${errorMessages}`
+        message: `Données invalides: ${errorMessages}`
       }
     }
     
     return { 
       success: false, 
-      message: 'Une erreur inattendue est survenue. Veuillez réessayer.' 
+      message: 'Une erreur inattendue est survenue.' 
     }
   }
 }

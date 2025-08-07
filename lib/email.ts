@@ -41,209 +41,79 @@ export interface FormationFormData {
   accompagnement: boolean
 }
 
-// Fonction pour créer le transporteur email avec configuration robuste
-function createEmailTransporter() {
+// Configuration SMTP simple et directe
+function createTransporter() {
   const config = {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
+    secure: false, // true pour 465, false pour autres ports
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
-    // Configuration étendue pour améliorer la compatibilité
-    tls: {
-      rejectUnauthorized: false,
-      ciphers: 'SSLv3'
-    },
-    // Timeout plus long pour les connexions lentes
-    connectionTimeout: 60000,
-    greetingTimeout: 30000,
-    socketTimeout: 60000,
-    // Options de debug
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development'
   }
 
-  console.log('📧 Configuration SMTP:', {
+  console.log('Configuration SMTP:', {
     host: config.host,
     port: config.port,
-    secure: config.secure,
     user: config.auth.user,
     hasPassword: !!config.auth.pass
   })
 
-  return nodemailer.createTransport(config)
-}
-
-// Fonction de fallback pour l'environnement de développement
-async function simulateEmailSend(emailData: any, type: 'contact' | 'formation'): Promise<{ success: boolean; error?: string }> {
-  console.log(`📧 [SIMULATION] Email ${type} - Environnement de développement`)
-  console.log('Données:', {
-    to: 'contact@docv.fr',
-    from: emailData.email,
-    subject: type === 'contact' 
-      ? `[DocV] Nouvelle demande de contact - ${emailData.nom} ${emailData.prenom}`
-      : `[DocV] Demande de devis formation - ${emailData.entreprise || emailData.nom}`,
-    timestamp: new Date().toISOString()
-  })
-  
-  // Simulation d'un délai réseau
-  await new Promise(resolve => setTimeout(resolve, 1500))
-  return { success: true }
-}
-
-// Fonction pour vérifier la configuration SMTP
-async function testSMTPConnection() {
-  try {
-    const transporter = createEmailTransporter()
-    await transporter.verify()
-    console.log('✅ Connexion SMTP vérifiée avec succès')
-    return true
-  } catch (error) {
-    console.error('❌ Erreur de vérification SMTP:', error)
-    return false
-  }
+  return nodemailer.createTransporter(config)
 }
 
 export async function sendContactEmail(data: ContactFormData) {
   try {
-    // Vérifier si nous sommes en environnement de production avec configuration SMTP
-    const hasRequiredEnvVars = process.env.SMTP_HOST && 
-                               process.env.SMTP_USER && 
-                               process.env.SMTP_PASSWORD
-    
-    const isServerSide = typeof window === 'undefined'
+    console.log('Début envoi email contact')
 
-    console.log('🔍 Vérification environnement:', {
-      hasRequiredEnvVars,
-      isServerSide,
-      nodeEnv: process.env.NODE_ENV,
-      smtpHost: process.env.SMTP_HOST,
-      smtpUser: process.env.SMTP_USER
-    })
-
-    if (!hasRequiredEnvVars || !isServerSide) {
-      console.log('🔄 Mode développement - Simulation d\'envoi d\'email')
-      return await simulateEmailSend(data, 'contact')
+    // Vérification des variables d'environnement
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+      console.error('Variables SMTP manquantes')
+      return { success: false, error: 'Configuration email manquante' }
     }
 
-    // Test de connexion SMTP avant envoi
-    console.log('🔍 Test de connexion SMTP...')
-    const smtpOk = await testSMTPConnection()
-    if (!smtpOk) {
-      console.error('❌ Connexion SMTP échouée')
-      return { 
-        success: false, 
-        error: 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration.' 
-      }
-    }
+    const transporter = createTransporter()
 
-    // Configuration pour l'envoi réel
-    const transporter = createEmailTransporter()
-
-    const servicesText = data.services.length > 0 
-      ? data.services.join(', ') 
-      : 'Aucun service spécifique sélectionné'
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Nouvelle demande de contact - DocV</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .section { margin-bottom: 25px; }
-          .section h3 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px; }
-          .field { margin-bottom: 10px; }
-          .field strong { color: #374151; }
-          .footer { background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>🔐 DocV - Nouvelle demande de contact</h1>
-        </div>
-        
-        <div class="content">
-          <div class="section">
-            <h3>👤 Informations de contact</h3>
-            <div class="field"><strong>Nom :</strong> ${data.nom}</div>
-            <div class="field"><strong>Prénom :</strong> ${data.prenom}</div>
-            <div class="field"><strong>Email :</strong> <a href="mailto:${data.email}">${data.email}</a></div>
-            ${data.telephone ? `<div class="field"><strong>Téléphone :</strong> ${data.telephone}</div>` : ''}
-            ${data.entreprise ? `<div class="field"><strong>Entreprise :</strong> ${data.entreprise}</div>` : ''}
-            ${data.fonction ? `<div class="field"><strong>Fonction :</strong> ${data.fonction}</div>` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>🎯 Projet</h3>
-            ${data.typeProjet ? `<div class="field"><strong>Type de projet :</strong> ${data.typeProjet}</div>` : ''}
-            ${data.budget ? `<div class="field"><strong>Budget estimé :</strong> ${data.budget}</div>` : ''}
-            ${data.delai ? `<div class="field"><strong>Délai souhaité :</strong> ${data.delai}</div>` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>📝 Description</h3>
-            <div class="field">
-              <strong>Description générale :</strong><br>
-              <div style="background: #f9fafb; padding: 15px; border-left: 4px solid #2563eb; margin-top: 5px;">
-                ${data.description.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            
-            ${data.objectifs ? `
-            <div class="field">
-              <strong>Objectifs principaux :</strong><br>
-              <div style="background: #f9fafb; padding: 15px; border-left: 4px solid #10b981; margin-top: 5px;">
-                ${data.objectifs.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            ` : ''}
-            
-            ${data.contraintes ? `
-            <div class="field">
-              <strong>Contraintes :</strong><br>
-              <div style="background: #f9fafb; padding: 15px; border-left: 4px solid #f59e0b; margin-top: 5px;">
-                ${data.contraintes.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            ` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>🛠️ Services souhaités</h3>
-            <div class="field">${servicesText}</div>
-          </div>
-          
-          <div class="section">
-            <h3>⚙️ Options</h3>
-            <div class="field"><strong>Démonstration souhaitée :</strong> ${data.demo ? '✅ Oui' : '❌ Non'}</div>
-            <div class="field"><strong>Accompagnement personnalisé :</strong> ${data.accompagnement ? '✅ Oui' : '❌ Non'}</div>
-          </div>
-        </div>
-        
-        <div class="footer">
-          <p>📧 Message envoyé depuis <strong>docv.fr</strong> le ${new Date().toLocaleString('fr-FR')}</p>
-          <p>🔐 DocV - Solutions de souveraineté numérique by 4NK</p>
-        </div>
-      </body>
-      </html>
-    `
+    const servicesText = data.services.length > 0 ? data.services.join(', ') : 'Aucun'
 
     const mailOptions = {
-      from: `"DocV Contact" <${process.env.SMTP_FROM}>`,
-      to: 'contact@docv.fr',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: process.env.SMTP_FROM || process.env.SMTP_USER, // Envoyer à soi-même
       replyTo: data.email,
-      subject: `[DocV] 📧 Nouvelle demande de contact - ${data.nom} ${data.prenom}`,
-      html: htmlContent,
+      subject: `[DocV] Contact - ${data.nom} ${data.prenom}`,
+      html: `
+        <h2>Nouvelle demande de contact</h2>
+        <p><strong>Nom:</strong> ${data.nom}</p>
+        <p><strong>Prénom:</strong> ${data.prenom}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        ${data.telephone ? `<p><strong>Téléphone:</strong> ${data.telephone}</p>` : ''}
+        ${data.entreprise ? `<p><strong>Entreprise:</strong> ${data.entreprise}</p>` : ''}
+        ${data.fonction ? `<p><strong>Fonction:</strong> ${data.fonction}</p>` : ''}
+        ${data.typeProjet ? `<p><strong>Type de projet:</strong> ${data.typeProjet}</p>` : ''}
+        ${data.budget ? `<p><strong>Budget:</strong> ${data.budget}</p>` : ''}
+        ${data.delai ? `<p><strong>Délai:</strong> ${data.delai}</p>` : ''}
+        
+        <h3>Description</h3>
+        <p>${data.description.replace(/\n/g, '<br>')}</p>
+        
+        ${data.objectifs ? `<h3>Objectifs</h3><p>${data.objectifs.replace(/\n/g, '<br>')}</p>` : ''}
+        ${data.contraintes ? `<h3>Contraintes</h3><p>${data.contraintes.replace(/\n/g, '<br>')}</p>` : ''}
+        
+        <h3>Services demandés</h3>
+        <p>${servicesText}</p>
+        
+        <h3>Options</h3>
+        <p>Démonstration: ${data.demo ? 'Oui' : 'Non'}</p>
+        <p>Accompagnement: ${data.accompagnement ? 'Oui' : 'Non'}</p>
+        
+        <hr>
+        <p><small>Message envoyé depuis docv.fr le ${new Date().toLocaleString('fr-FR')}</small></p>
+      `,
       text: `
 Nouvelle demande de contact - DocV
 
-Informations de contact:
+Informations:
 - Nom: ${data.nom}
 - Prénom: ${data.prenom}
 - Email: ${data.email}
@@ -259,188 +129,89 @@ ${data.delai ? `- Délai: ${data.delai}` : ''}
 Description:
 ${data.description}
 
-${data.objectifs ? `Objectifs: ${data.objectifs}` : ''}
-${data.contraintes ? `Contraintes: ${data.contraintes}` : ''}
+${data.objectifs ? `Objectifs:\n${data.objectifs}\n` : ''}
+${data.contraintes ? `Contraintes:\n${data.contraintes}\n` : ''}
 
 Services: ${servicesText}
 Démo: ${data.demo ? 'Oui' : 'Non'}
 Accompagnement: ${data.accompagnement ? 'Oui' : 'Non'}
 
+---
 Message envoyé depuis docv.fr
       `
     }
 
-    console.log('📤 Tentative d\'envoi email...')
+    console.log('Envoi email vers:', mailOptions.to)
     const result = await transporter.sendMail(mailOptions)
-    console.log('✅ Email de contact envoyé avec succès:', result.messageId)
+    console.log('Email envoyé avec succès:', result.messageId)
+    
     return { success: true }
-    
+
   } catch (error: any) {
-    console.error('❌ Erreur détaillée envoi email contact:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      stack: error.stack
-    })
-    
-    // Messages d'erreur plus spécifiques
-    let errorMessage = 'Erreur lors de l\'envoi de l\'email'
-    
-    if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration réseau.'
-    } else if (error.code === 'EAUTH' || error.responseCode === 535) {
-      errorMessage = 'Erreur d\'authentification SMTP. Vérifiez les identifiants.'
-    } else if (error.code === 'ETIMEDOUT') {
-      errorMessage = 'Timeout de connexion SMTP. Le serveur met trop de temps à répondre.'
-    } else if (error.code === 'ENOTFOUND') {
-      errorMessage = 'Serveur SMTP introuvable. Vérifiez l\'adresse du serveur.'
+    console.error('Erreur envoi email:', error.message)
+    return { 
+      success: false, 
+      error: `Erreur d'envoi: ${error.message}` 
     }
-    
-    return { success: false, error: errorMessage }
   }
 }
 
 export async function sendFormationEmail(data: FormationFormData) {
   try {
-    // Vérifier si nous sommes en environnement de production avec configuration SMTP
-    const hasRequiredEnvVars = process.env.SMTP_HOST && 
-                               process.env.SMTP_USER && 
-                               process.env.SMTP_PASSWORD
-    
-    const isServerSide = typeof window === 'undefined'
+    console.log('Début envoi email formation')
 
-    console.log('🔍 Vérification environnement formation:', {
-      hasRequiredEnvVars,
-      isServerSide,
-      nodeEnv: process.env.NODE_ENV
-    })
-
-    if (!hasRequiredEnvVars || !isServerSide) {
-      console.log('🔄 Mode développement - Simulation d\'envoi d\'email formation')
-      return await simulateEmailSend(data, 'formation')
+    // Vérification des variables d'environnement
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+      console.error('Variables SMTP manquantes')
+      return { success: false, error: 'Configuration email manquante' }
     }
 
-    // Test de connexion SMTP avant envoi
-    console.log('🔍 Test de connexion SMTP pour formation...')
-    const smtpOk = await testSMTPConnection()
-    if (!smtpOk) {
-      console.error('❌ Connexion SMTP échouée pour formation')
-      return { 
-        success: false, 
-        error: 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration.' 
-      }
-    }
+    const transporter = createTransporter()
 
-    // Configuration pour l'envoi réel
-    const transporter = createEmailTransporter()
-
-    const formationsText = data.formations.length > 0 
-      ? data.formations.join(', ') 
-      : 'Aucune formation spécifique sélectionnée'
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Demande de devis formation - DocV</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .header { background: #059669; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .section { margin-bottom: 25px; }
-          .section h3 { color: #059669; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px; }
-          .field { margin-bottom: 10px; }
-          .field strong { color: #374151; }
-          .footer { background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280; }
-          .formations { background: #ecfdf5; padding: 15px; border-radius: 8px; border-left: 4px solid #059669; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>🎓 DocV - Demande de devis formation</h1>
-        </div>
-        
-        <div class="content">
-          <div class="section">
-            <h3>🏢 Informations entreprise</h3>
-            <div class="field"><strong>Entreprise :</strong> ${data.entreprise}</div>
-            ${data.secteur ? `<div class="field"><strong>Secteur :</strong> ${data.secteur}</div>` : ''}
-            ${data.taille ? `<div class="field"><strong>Taille :</strong> ${data.taille}</div>` : ''}
-            ${data.siret ? `<div class="field"><strong>SIRET :</strong> ${data.siret}</div>` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>👤 Contact</h3>
-            <div class="field"><strong>Nom :</strong> ${data.nom}</div>
-            <div class="field"><strong>Prénom :</strong> ${data.prenom}</div>
-            <div class="field"><strong>Email :</strong> <a href="mailto:${data.email}">${data.email}</a></div>
-            ${data.telephone ? `<div class="field"><strong>Téléphone :</strong> ${data.telephone}</div>` : ''}
-            ${data.fonction ? `<div class="field"><strong>Fonction :</strong> ${data.fonction}</div>` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>📚 Formations souhaitées</h3>
-            <div class="formations">
-              <strong>${formationsText}</strong>
-            </div>
-          </div>
-          
-          <div class="section">
-            <h3>📅 Modalités</h3>
-            ${data.modalite ? `<div class="field"><strong>Mode de formation :</strong> ${data.modalite}</div>` : ''}
-            ${data.participants ? `<div class="field"><strong>Nombre de participants :</strong> ${data.participants}</div>` : ''}
-            ${data.dates ? `<div class="field"><strong>Période souhaitée :</strong> ${data.dates}</div>` : ''}
-            ${data.lieu ? `<div class="field"><strong>Lieu :</strong> ${data.lieu}</div>` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>🎯 Besoins spécifiques</h3>
-            ${data.objectifs ? `
-            <div class="field">
-              <strong>Objectifs :</strong><br>
-              <div style="background: #f0fdf4; padding: 15px; border-left: 4px solid #059669; margin-top: 5px;">
-                ${data.objectifs.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            ` : ''}
-            
-            ${data.niveau ? `<div class="field"><strong>Niveau des participants :</strong> ${data.niveau}</div>` : ''}
-            
-            ${data.contraintes ? `
-            <div class="field">
-              <strong>Contraintes :</strong><br>
-              <div style="background: #fefce8; padding: 15px; border-left: 4px solid #f59e0b; margin-top: 5px;">
-                ${data.contraintes.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            ` : ''}
-          </div>
-          
-          <div class="section">
-            <h3>⚙️ Options</h3>
-            <div class="field"><strong>Certification RNCP :</strong> ${data.certification ? '✅ Oui' : '❌ Non'}</div>
-            <div class="field"><strong>Support 6 mois :</strong> ${data.support ? '✅ Oui' : '❌ Non'}</div>
-            <div class="field"><strong>Accompagnement personnalisé :</strong> ${data.accompagnement ? '✅ Oui' : '❌ Non'}</div>
-          </div>
-        </div>
-        
-        <div class="footer">
-          <p>📧 Message envoyé depuis <strong>docv.fr</strong> le ${new Date().toLocaleString('fr-FR')}</p>
-          <p>🎓 DocV Formation - Centre agréé 4NK</p>
-        </div>
-      </body>
-      </html>
-    `
+    const formationsText = data.formations.length > 0 ? data.formations.join(', ') : 'Aucune'
 
     const mailOptions = {
-      from: `"DocV Formation" <${process.env.SMTP_FROM}>`,
-      to: 'contact@docv.fr',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: process.env.SMTP_FROM || process.env.SMTP_USER, // Envoyer à soi-même
       replyTo: data.email,
-      subject: `[DocV] 🎓 Demande de devis formation - ${data.entreprise}`,
-      html: htmlContent,
+      subject: `[DocV] Formation - ${data.entreprise}`,
+      html: `
+        <h2>Demande de devis formation</h2>
+        
+        <h3>Entreprise</h3>
+        <p><strong>Nom:</strong> ${data.entreprise}</p>
+        ${data.secteur ? `<p><strong>Secteur:</strong> ${data.secteur}</p>` : ''}
+        ${data.taille ? `<p><strong>Taille:</strong> ${data.taille}</p>` : ''}
+        ${data.siret ? `<p><strong>SIRET:</strong> ${data.siret}</p>` : ''}
+        
+        <h3>Contact</h3>
+        <p><strong>Nom:</strong> ${data.nom}</p>
+        <p><strong>Prénom:</strong> ${data.prenom}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        ${data.telephone ? `<p><strong>Téléphone:</strong> ${data.telephone}</p>` : ''}
+        ${data.fonction ? `<p><strong>Fonction:</strong> ${data.fonction}</p>` : ''}
+        
+        <h3>Formations demandées</h3>
+        <p>${formationsText}</p>
+        
+        <h3>Modalités</h3>
+        ${data.modalite ? `<p><strong>Mode:</strong> ${data.modalite}</p>` : ''}
+        ${data.participants ? `<p><strong>Participants:</strong> ${data.participants}</p>` : ''}
+        ${data.dates ? `<p><strong>Dates:</strong> ${data.dates}</p>` : ''}
+        ${data.lieu ? `<p><strong>Lieu:</strong> ${data.lieu}</p>` : ''}
+        
+        ${data.objectifs ? `<h3>Objectifs</h3><p>${data.objectifs.replace(/\n/g, '<br>')}</p>` : ''}
+        ${data.niveau ? `<p><strong>Niveau:</strong> ${data.niveau}</p>` : ''}
+        ${data.contraintes ? `<h3>Contraintes</h3><p>${data.contraintes.replace(/\n/g, '<br>')}</p>` : ''}
+        
+        <h3>Options</h3>
+        <p>Certification RNCP: ${data.certification ? 'Oui' : 'Non'}</p>
+        <p>Support 6 mois: ${data.support ? 'Oui' : 'Non'}</p>
+        <p>Accompagnement: ${data.accompagnement ? 'Oui' : 'Non'}</p>
+        
+        <hr>
+        <p><small>Message envoyé depuis docv.fr le ${new Date().toLocaleString('fr-FR')}</small></p>
+      `,
       text: `
 Demande de devis formation - DocV
 
@@ -448,10 +219,9 @@ Entreprise: ${data.entreprise}
 ${data.secteur ? `Secteur: ${data.secteur}` : ''}
 ${data.taille ? `Taille: ${data.taille}` : ''}
 
-Contact:
-- ${data.nom} ${data.prenom}
-- ${data.email}
-${data.telephone ? `- ${data.telephone}` : ''}
+Contact: ${data.nom} ${data.prenom}
+Email: ${data.email}
+${data.telephone ? `Téléphone: ${data.telephone}` : ''}
 
 Formations: ${formationsText}
 
@@ -467,37 +237,22 @@ Options:
 - Support: ${data.support ? 'Oui' : 'Non'}
 - Accompagnement: ${data.accompagnement ? 'Oui' : 'Non'}
 
+---
 Message envoyé depuis docv.fr
       `
     }
 
-    console.log('📤 Tentative d\'envoi email formation...')
+    console.log('Envoi email formation vers:', mailOptions.to)
     const result = await transporter.sendMail(mailOptions)
-    console.log('✅ Email de formation envoyé avec succès:', result.messageId)
+    console.log('Email formation envoyé avec succès:', result.messageId)
+    
     return { success: true }
-    
+
   } catch (error: any) {
-    console.error('❌ Erreur détaillée envoi email formation:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode
-    })
-    
-    // Messages d'erreur plus spécifiques
-    let errorMessage = 'Erreur lors de l\'envoi de l\'email'
-    
-    if (error.code === 'ECONNREFUSED') {
-      errorMessage = 'Impossible de se connecter au serveur SMTP. Vérifiez la configuration réseau.'
-    } else if (error.code === 'EAUTH' || error.responseCode === 535) {
-      errorMessage = 'Erreur d\'authentification SMTP. Vérifiez les identifiants.'
-    } else if (error.code === 'ETIMEDOUT') {
-      errorMessage = 'Timeout de connexion SMTP. Le serveur met trop de temps à répondre.'
-    } else if (error.code === 'ENOTFOUND') {
-      errorMessage = 'Serveur SMTP introuvable. Vérifiez l\'adresse du serveur.'
+    console.error('Erreur envoi email formation:', error.message)
+    return { 
+      success: false, 
+      error: `Erreur d'envoi: ${error.message}` 
     }
-    
-    return { success: false, error: errorMessage }
   }
 }
