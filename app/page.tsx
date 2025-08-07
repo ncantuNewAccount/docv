@@ -203,6 +203,72 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* References Section */}
+      <section className="py-16 px-4 bg-white">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4 text-gray-900">🤝 Références et Intégrations</h2>
+            <p className="text-xl text-gray-600">DocV fait confiance aux plus grands éditeurs et sert d'infrastructure à des secteurs critiques</p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-blue-200">
+              <CardHeader>
+                <Globe className="h-12 w-12 text-blue-600 mb-4" />
+                <CardTitle className="text-blue-700">🏢 Intégration Marque Blanche</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 mb-4">
+                  DocV est intégrée en marque blanche par de grands éditeurs qui font confiance 
+                  à notre technologie pour sécuriser leurs solutions documentaires.
+                </p>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• Infrastructure invisible mais essentielle</li>
+                  <li>• Sécurisation des échanges documentaires</li>
+                  <li>• Conformité réglementaire garantie</li>
+                  <li>• Scalabilité pour les grands volumes</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200">
+              <CardHeader>
+                <Shield className="h-12 w-12 text-green-600 mb-4" />
+                <CardTitle className="text-green-700">⚖️ Référence Notariale : lecoffre.io</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 mb-4">
+                  DocV sert d'infrastructure au site <strong>lecoffre.io</strong>, plateforme de référence 
+                  pour la gestion sécurisée des échanges documentaires notariaux.
+                </p>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• Échanges notaires ↔ clients sécurisés</li>
+                  <li>• Communications inter-notaires chiffrées</li>
+                  <li>• Partenariats bancaires sécurisés</li>
+                  <li>• Conformité aux exigences notariales</li>
+                </ul>
+                <div className="mt-4 p-3 bg-white rounded-lg border border-green-200">
+                  <p className="text-sm text-green-800">
+                    <strong>lecoffre.io</strong> : La confiance des notaires français 
+                    pour leurs échanges documentaires les plus sensibles.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-12 text-center">
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-8 rounded-2xl border border-gray-200">
+              <h3 className="text-2xl font-bold mb-4 text-gray-900">🔒 Une technologie éprouvée</h3>
+              <p className="text-lg text-gray-700 max-w-3xl mx-auto">
+                Quand les secteurs les plus exigeants en matière de sécurité et de confidentialité 
+                choisissent DocV, c'est la preuve de la robustesse et de la fiabilité de notre solution.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Summary */}
       <section className="py-16 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="container mx-auto text-center">

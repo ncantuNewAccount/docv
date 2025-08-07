@@ -32,10 +32,24 @@ export default function FormationPage() {
             Développez vos compétences en cybersécurité, hygiène numérique et développement d'applications souveraines 
             avec nos formations expertes dispensées par 4NK.
           </p>
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            <Badge variant="outline" className="text-lg px-4 py-2 bg-green-50 border-green-200 text-green-700">
+              <Award className="h-4 w-4 mr-2" />
+              Centre de formation agréé
+            </Badge>
+            <Badge variant="outline" className="text-lg px-4 py-2 bg-blue-50 border-blue-200 text-blue-700">
+              <Award className="h-4 w-4 mr-2" />
+              Titre RNCP Niveau 6 "Développeur Blockchain"
+            </Badge>
+            <Badge variant="outline" className="text-lg px-4 py-2 bg-purple-50 border-purple-200 text-purple-700">
+              <Award className="h-4 w-4 mr-2" />
+              Seul établissement en France
+            </Badge>
+          </div>
           <div className="flex flex-wrap justify-center gap-4">
             <Badge variant="outline" className="text-lg px-4 py-2">
-              <Award className="h-4 w-4 mr-2" />
-              Certifiantes
+              <BookOpen className="h-4 w-4 mr-2" />
+              Formations certifiantes
             </Badge>
             <Badge variant="outline" className="text-lg px-4 py-2">
               <Users className="h-4 w-4 mr-2" />
@@ -236,19 +250,17 @@ export default function FormationPage() {
                   </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg">
-                  <h4 className="font-semibold mb-4">Avantages du parcours complet :</h4>
-                  <div className="grid md:grid-cols-2 gap-4 text-left">
-                    <ul className="space-y-2 text-gray-600">
-                      <li>• Certification 4NK reconnue</li>
-                      <li>• Accompagnement personnalisé</li>
-                      <li>• Accès privilégié aux outils DocV</li>
-                    </ul>
-                    <ul className="space-y-2 text-gray-600">
-                      <li>• Support technique 6 mois</li>
-                      <li>• Communauté d'experts</li>
-                      <li>• Mises à jour formations incluses</li>
-                    </ul>
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+                  <div className="text-center mb-4">
+                    <h4 className="font-semibold text-lg mb-2">🏆 4NK - Centre de formation agréé</h4>
+                    <p className="text-gray-700 mb-3">
+                      Seul établissement en France à disposer du titre RNCP de niveau 6 : 
+                      <span className="font-semibold text-blue-700"> "Développeur Blockchain"</span>
+                    </p>
+                    <div className="flex justify-center gap-2">
+                      <Badge className="bg-green-600 text-white">Agréé centre de formation</Badge>
+                      <Badge className="bg-blue-600 text-white">RNCP Niveau 6</Badge>
+                    </div>
                   </div>
                 </div>
 
