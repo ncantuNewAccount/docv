@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Key, ArrowLeft, Eye } from 'lucide-react'
+import { Shield, Key, ArrowLeft, Eye, Globe, Server } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 
 export default function LoginPage() {
@@ -35,6 +35,25 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Sovereign Space Notice */}
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border-2 border-green-200">
+              <div className="flex items-start space-x-3">
+                <Server className="h-6 w-6 text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-green-800 mb-2">🌐 Espace Souverain</h4>
+                  <p className="text-sm text-green-700 mb-2">
+                    Après connexion, vous serez redirigé vers votre espace souverain 
+                    <strong> hors cloud</strong>, hébergé sur votre infrastructure.
+                  </p>
+                  <ul className="text-xs text-green-600 space-y-1">
+                    <li>• Vos données restent sous votre contrôle</li>
+                    <li>• Aucune dépendance aux services cloud tiers</li>
+                    <li>• Infrastructure décentralisée et sécurisée</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             {/* Cryptographic Login Section */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <h3 className="font-semibold text-blue-800 mb-2">Authentification par clé cryptographique</h3>
@@ -70,7 +89,8 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full">
-              Accéder à DocV
+              <Globe className="h-4 w-4 mr-2" />
+              Accéder à mon espace souverain
             </Button>
 
             {/* Demo Request */}
@@ -95,6 +115,7 @@ export default function LoginPage() {
                 <li>• Aucun OTP ou code par email</li>
                 <li>• Chiffrement de bout en bout</li>
                 <li>• Authentification décentralisée</li>
+                <li>• Infrastructure hors cloud</li>
               </ul>
             </div>
 
