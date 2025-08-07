@@ -11,37 +11,30 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Shield, ArrowLeft, Mail, Phone, Building, User, MessageSquare, CheckCircle, Code, Lightbulb } from 'lucide-react'
+import { Shield, ArrowLeft, Mail, User, MessageSquare, CheckCircle, Lightbulb, Loader2 } from 'lucide-react'
+import { submitContactForm } from '@/app/actions/contact'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    // Informations contact
     nom: '',
     prenom: '',
     email: '',
     telephone: '',
     entreprise: '',
     fonction: '',
-    
-    // Type de demande
     typeProjet: '',
     budget: '',
     delai: '',
-    
-    // Description du projet
     description: '',
     objectifs: '',
     contraintes: '',
-    
-    // Services souhaités
     services: [] as string[],
-    
-    // Options
     demo: false,
     accompagnement: false
   })
 
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const handleServiceChange = (service: string, checked: boolean) => {
     if (checked) {
@@ -57,13 +50,69 @@ export default function ContactPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Ici on traiterait normalement l'envoi du formulaire
-    setIsSubmitted(true)
+    
+    // Validation côté client
+    if (formData.description.trim().length < 10) {
+      setSubmitResult({
+        success: false,
+        message: 'La description doit contenir au moins 10 caractères.'
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitResult(null)
+
+    try {
+      const formDataToSend = new FormData()
+      
+      // Ajout de tous les champs au FormData
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'services') {
+          value.forEach((service: string) => formDataToSend.append('services', service))
+        } else if (typeof value === 'boolean') {
+          formDataToSend.append(key, value.toString())
+        } else {
+          formDataToSend.append(key, value)
+        }
+      })
+
+      const result = await submitContactForm(formDataToSend)
+      setSubmitResult(result)
+      
+      if (result.success) {
+        // Reset du formulaire en cas de succès
+        setFormData({
+          nom: '',
+          prenom: '',
+          email: '',
+          telephone: '',
+          entreprise: '',
+          fonction: '',
+          typeProjet: '',
+          budget: '',
+          delai: '',
+          description: '',
+          objectifs: '',
+          contraintes: '',
+          services: [],
+          demo: false,
+          accompagnement: false
+        })
+      }
+    } catch (error) {
+      setSubmitResult({
+        success: false,
+        message: 'Une erreur inattendue est survenue. Veuillez réessayer.'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  if (isSubmitted) {
+  if (submitResult?.success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl border-2 border-green-200 bg-green-50">
@@ -71,7 +120,7 @@ export default function ContactPage() {
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <CardTitle className="text-3xl text-green-700">Message envoyé !</CardTitle>
             <CardDescription className="text-lg">
-              Votre demande de contact a été transmise avec succès
+              {submitResult.message}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-6">
@@ -132,6 +181,13 @@ export default function ContactPage() {
               dans la mise en œuvre de solutions DocV adaptées à vos besoins.
             </p>
           </div>
+
+          {/* Message d'erreur */}
+          {submitResult && !submitResult.success && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{submitResult.message}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Informations Contact */}
@@ -358,10 +414,14 @@ export default function ContactPage() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Décrivez votre projet, vos besoins, votre contexte..."
+                    placeholder="Décrivez votre projet, vos besoins, votre contexte... (minimum 10 caractères)"
                     rows={4}
                     required
+                    className={formData.description.trim().length > 0 && formData.description.trim().length < 10 ? 'border-red-300' : ''}
                   />
+                  <p className="text-sm text-gray-500">
+                    {formData.description.trim().length}/10 caractères minimum
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -419,9 +479,23 @@ export default function ContactPage() {
 
             {/* Submit */}
             <div className="text-center">
-              <Button type="submit" size="lg" className="text-lg px-12 py-3">
-                <Mail className="h-5 w-5 mr-2" />
-                Envoyer la demande
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="text-lg px-12 py-3"
+                disabled={isSubmitting || formData.description.trim().length < 10}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-5 w-5 mr-2" />
+                    Envoyer la demande
+                  </>
+                )}
               </Button>
               <p className="text-sm text-gray-600 mt-4">
                 Réponse sous 24h • Contact direct : contact@docv.fr

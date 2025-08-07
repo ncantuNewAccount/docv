@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Shield, ArrowLeft, Users, Calendar, MapPin, Mail, Phone, Building, User, FileText, CheckCircle } from 'lucide-react'
+import { Shield, ArrowLeft, Users, Calendar, MapPin, Mail, Phone, Building, User, FileText, CheckCircle, Loader2 } from 'lucide-react'
+import { submitFormationForm } from '@/app/actions/formation'
 
 export default function DevisFormationPage() {
   const [formData, setFormData] = useState({
@@ -46,7 +47,8 @@ export default function DevisFormationPage() {
     accompagnement: false
   })
 
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const handleFormationChange = (formation: string, checked: boolean) => {
     if (checked) {
@@ -62,13 +64,64 @@ export default function DevisFormationPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Ici on traiterait normalement l'envoi du formulaire
-    setIsSubmitted(true)
+    setIsSubmitting(true)
+    setSubmitResult(null)
+
+    try {
+      const formDataToSend = new FormData()
+      
+      // Ajout de tous les champs au FormData
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'formations') {
+          value.forEach((formation: string) => formDataToSend.append('formations', formation))
+        } else if (typeof value === 'boolean') {
+          formDataToSend.append(key, value.toString())
+        } else {
+          formDataToSend.append(key, value)
+        }
+      })
+
+      const result = await submitFormationForm(formDataToSend)
+      setSubmitResult(result)
+      
+      if (result.success) {
+        // Reset du formulaire en cas de succès
+        setFormData({
+          entreprise: '',
+          secteur: '',
+          taille: '',
+          siret: '',
+          nom: '',
+          prenom: '',
+          fonction: '',
+          email: '',
+          telephone: '',
+          formations: [],
+          modalite: '',
+          participants: '',
+          dates: '',
+          lieu: '',
+          objectifs: '',
+          niveau: '',
+          contraintes: '',
+          certification: false,
+          support: false,
+          accompagnement: false
+        })
+      }
+    } catch (error) {
+      setSubmitResult({
+        success: false,
+        message: 'Une erreur inattendue est survenue. Veuillez réessayer.'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  if (isSubmitted) {
+  if (submitResult?.success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl border-2 border-green-200 bg-green-50">
@@ -76,7 +129,7 @@ export default function DevisFormationPage() {
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <CardTitle className="text-3xl text-green-700">Demande envoyée !</CardTitle>
             <CardDescription className="text-lg">
-              Votre demande de devis a été transmise avec succès
+              {submitResult.message}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-6">
@@ -91,7 +144,7 @@ export default function DevisFormationPage() {
             </div>
             <div className="space-y-4">
               <p className="text-gray-600">
-                <strong>Contact direct :</strong> contact@4nkweb.com
+                <strong>Contact direct :</strong> contact@docv.fr
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/formation">
@@ -137,6 +190,13 @@ export default function DevisFormationPage() {
               Nos experts vous accompagnent dans la définition de vos besoins.
             </p>
           </div>
+
+          {/* Message d'erreur */}
+          {submitResult && !submitResult.success && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{submitResult.message}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Informations Entreprise */}
@@ -495,9 +555,23 @@ export default function DevisFormationPage() {
 
             {/* Submit */}
             <div className="text-center">
-              <Button type="submit" size="lg" className="text-lg px-12 py-3">
-                <Mail className="h-5 w-5 mr-2" />
-                Envoyer la demande de devis
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="text-lg px-12 py-3"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-5 w-5 mr-2" />
+                    Envoyer la demande de devis
+                  </>
+                )}
               </Button>
               <p className="text-sm text-gray-600 mt-4">
                 Réponse sous 24h • Devis gratuit et sans engagement
