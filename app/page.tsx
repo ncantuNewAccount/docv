@@ -349,7 +349,7 @@ export default function HomePage() {
         <div className="container mx-auto text-center">
           <h2 className="text-4xl font-bold mb-8">🔐 En résumé</h2>
           <p className="text-xl mb-8 max-w-4xl mx-auto">
-            DocV transforme la GED : plus simple, plus sûre, plus souveraine, moins chère, 
+            DocV transforme la GED : plus simple, plus sûre, plus souveraine, 
             et parfaitement compatible avec vos outils existants.
           </p>
           <p className="text-lg mb-8">
@@ -368,7 +368,7 @@ export default function HomePage() {
             <Card className="border-2 border-blue-200 bg-blue-50">
               <CardHeader className="text-center">
                 <CardTitle className="text-3xl font-bold text-blue-700">Sécurisez votre entreprise avec l'offre Découverte</CardTitle>
-                <CardDescription className="text-xl">à 2990 € HT pour 1000 jetons par mois consommés</CardDescription>
+                <CardDescription className="text-xl">à 2990 € HT pour 1000 jetons par mois</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -392,7 +392,7 @@ export default function HomePage() {
                 
                 <div className="mt-6 p-4 bg-white rounded-lg">
                   <p className="text-sm text-gray-600">
-                    <strong>👉 1000 jetons</strong> = 1 To maximum de documents réellement chiffrés, ancrés, 
+                    <strong>👉 1000 jetons</strong> = 250 Go de documents chiffrés, ancrés, 
                     classifiés, traçables et auto-vérifiables + 100 nouveaux dossiers maximum au mois.
                   </p>
                 </div>
