@@ -51,8 +51,8 @@ export async function sendContactEmail(data: ContactFormData) {
       return { success: false, error: 'Configuration email manquante' }
     }
 
-    // Configuration SMTP
-    const transporter = nodemailer.createTransporter({
+    // Configuration SMTP - CORRECTION ICI
+    const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false,
@@ -69,7 +69,7 @@ export async function sendContactEmail(data: ContactFormData) {
 
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: destinationEmail, // Adresse explicite
+      to: destinationEmail,
       replyTo: data.email,
       subject: `[DocV] Contact - ${data.nom} ${data.prenom}`,
       html: `
@@ -119,7 +119,7 @@ export async function sendContactEmail(data: ContactFormData) {
             <p><strong>Accompagnement personnalisé :</strong> ${data.accompagnement ? '✅ Oui' : '❌ Non'}</p>
           </div>
           
-          <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280;">
+          <div style="background: #f3f4f6; padding: 15px; text-center; font-size: 12px; color: #6b7280;">
             <p>📧 Message envoyé depuis <strong>docv.fr</strong> le ${new Date().toLocaleString('fr-FR')}</p>
             <p>🔐 DocV - Solutions de souveraineté numérique by 4NK</p>
           </div>
@@ -186,8 +186,8 @@ export async function sendFormationEmail(data: FormationFormData) {
       return { success: false, error: 'Configuration email manquante' }
     }
 
-    // Configuration SMTP
-    const transporter = nodemailer.createTransporter({
+    // Configuration SMTP - CORRECTION ICI
+    const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false,
@@ -204,7 +204,7 @@ export async function sendFormationEmail(data: FormationFormData) {
 
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: destinationEmail, // Adresse explicite
+      to: destinationEmail,
       replyTo: data.email,
       subject: `[DocV] Formation - ${data.entreprise}`,
       html: `
@@ -260,7 +260,7 @@ export async function sendFormationEmail(data: FormationFormData) {
             <p><strong>Accompagnement personnalisé :</strong> ${data.accompagnement ? '✅ Oui' : '❌ Non'}</p>
           </div>
           
-          <div style="background: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280;">
+          <div style="background: #f3f4f6; padding: 15px; text-center; font-size: 12px; color: #6b7280;">
             <p>📧 Message envoyé depuis <strong>docv.fr</strong> le ${new Date().toLocaleString('fr-FR')}</p>
             <p>🎓 DocV Formation - Centre agréé 4NK</p>
           </div>
