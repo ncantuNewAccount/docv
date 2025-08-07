@@ -367,8 +367,8 @@ export default function HomePage() {
           <div className="max-w-2xl mx-auto">
             <Card className="border-2 border-blue-200 bg-blue-50">
               <CardHeader className="text-center">
-                <CardTitle className="text-3xl font-bold text-blue-700">2 990 € HT</CardTitle>
-                <CardDescription className="text-xl">par To sécurisé par mois</CardDescription>
+                <CardTitle className="text-3xl font-bold text-blue-700">2990 € HT</CardTitle>
+                <CardDescription className="text-xl">pour 1000 jetons par mois consommés</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -392,8 +392,8 @@ export default function HomePage() {
                 
                 <div className="mt-6 p-4 bg-white rounded-lg">
                   <p className="text-sm text-gray-600">
-                    <strong>👉 Un To</strong> = 1 To de documents réellement chiffrés, ancrés, 
-                    classifiés, traçables et auto-vérifiables.
+                    <strong>👉 1000 jetons</strong> = 1 To maximum de documents réellement chiffrés, ancrés, 
+                    classifiés, traçables et auto-vérifiables + 100 nouveaux dossiers maximum au mois.
                   </p>
                 </div>
 
@@ -417,7 +417,7 @@ export default function HomePage() {
 
                 <div className="mt-6 text-center">
                   <p className="text-lg font-semibold text-blue-700 mb-4">
-                    Un tarif mensuel transparent + setup personnalisé
+                    Tarification à la consommation + setup personnalisé
                   </p>
                   <Link href="/contact">
                     <Button size="lg" className="w-full">
