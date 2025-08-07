@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Key, ArrowLeft } from 'lucide-react'
+import { Shield, Key, ArrowLeft, Eye } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 
 export default function LoginPage() {
@@ -73,6 +73,20 @@ export default function LoginPage() {
               Accéder à DocV
             </Button>
 
+            {/* Demo Request */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 className="font-semibold text-green-800 mb-2">🎯 Découvrir DocV</h4>
+              <p className="text-sm text-green-700 mb-3">
+                Pas encore de compte ? Demandez une démonstration personnalisée avant de vous inscrire.
+              </p>
+              <Link href="/contact">
+                <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-50">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Demander une démo avant de créer un compte
+                </Button>
+              </Link>
+            </div>
+
             {/* Security Features */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-semibold text-gray-800 mb-2">🔐 Sécurité garantie</h4>
@@ -100,8 +114,8 @@ export default function LoginPage() {
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
             Support technique : 
-            <a href="mailto:contact@4nkweb.com" className="text-blue-600 hover:text-blue-700 ml-1">
-              contact@4nkweb.com
+            <a href="mailto:contact@docv.fr" className="text-blue-600 hover:text-blue-700 ml-1">
+              contact@docv.fr
             </a>
           </p>
         </div>

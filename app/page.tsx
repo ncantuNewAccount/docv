@@ -317,13 +317,17 @@ export default function HomePage() {
                       de vos solutions distribuées basées sur nos composants open source.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button className="bg-purple-600 hover:bg-purple-700">
-                        <Code className="h-4 w-4 mr-2" />
-                        Accéder au code source
-                      </Button>
-                      <Button variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-50">
-                        Contactez-nous pour un projet
-                      </Button>
+                      <a href="https://git.4nkweb.com" target="_blank" rel="noopener noreferrer">
+                        <Button className="bg-purple-600 hover:bg-purple-700">
+                          <Code className="h-4 w-4 mr-2" />
+                          Accéder au code source
+                        </Button>
+                      </a>
+                      <Link href="/contact">
+                        <Button variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                          Contactez-nous pour un projet
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -388,7 +392,7 @@ export default function HomePage() {
                 
                 <div className="mt-6 p-4 bg-white rounded-lg">
                   <p className="text-sm text-gray-600">
-                    <strong>👉 Un To</strong> = 1 To de documents réellement cryptés, ancrés, 
+                    <strong>👉 Un To</strong> = 1 To de documents réellement chiffrés, ancrés, 
                     classifiés, traçables et auto-vérifiables.
                   </p>
                 </div>
@@ -423,7 +427,7 @@ export default function HomePage() {
                 4NK, pionnier du Web 5.0. Conçoit et développe des solutions de souveraineté.
               </p>
               <p className="text-gray-400">
-                contact@4nkweb.com
+                contact@docv.fr
               </p>
             </div>
             <div>
