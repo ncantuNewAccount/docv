@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { Iframe } from "@/components/4nk/Iframe"
+import { DebugInfo } from "@/components/4nk/DebugInfo"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -34,13 +35,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [userPairingId, setUserPairingId] = useState<string | null>(null)
 
-  const iframeUrl = process.env.NEXT_PUBLIC_4NK_IFRAME_URL || "https://dev.4nk.io"
+  const iframeUrl = process.env.NEXT_PUBLIC_4NK_IFRAME_URL || "https://dev3.4nkweb.com"
 
   useEffect(() => {
+    console.log("🔧 Dashboard Layout - iframe URL:", iframeUrl)
+
     // Vérifier si l'utilisateur est déjà connecté
     const userStore = UserStore.getInstance()
     const isConnected = userStore.isConnected()
     const pairingId = userStore.getUserPairingId()
+
+    console.log("👤 User connected:", isConnected)
+    console.log("🆔 Pairing ID:", pairingId?.slice(0, 8) + "...")
 
     setIsAuthenticated(isConnected)
     setUserPairingId(pairingId)
@@ -48,7 +54,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     if (!isConnected) {
       setIsAuthModalOpen(true)
     }
-  }, [])
+  }, [iframeUrl])
 
   const handleAuthSuccess = () => {
     const userStore = UserStore.getInstance()
@@ -101,6 +107,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             iframeUrl={iframeUrl}
           />
         </div>
+
+        {/* Composant de debug */}
+        <DebugInfo />
       </div>
     )
   }
@@ -170,6 +179,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main Content */}
         <main className="flex-1 p-6">{children}</main>
       </div>
+
+      {/* Composant de debug */}
+      <DebugInfo />
     </div>
   )
 }

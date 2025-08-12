@@ -38,13 +38,16 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
         setIsLoading(true)
         setError(null)
 
+        console.log("🔗 Initialisation authentification avec:", iframeUrl)
+
         // Attendre que l'iframe soit disponible
         let attempts = 0
-        const maxAttempts = 10
+        const maxAttempts = 20 // Augmenté à 10 secondes
 
         while (attempts < maxAttempts) {
           const iframe = IframeReference.getIframe()
           if (iframe && iframe.contentWindow) {
+            console.log("✅ Iframe disponible après", attempts * 500, "ms")
             break
           }
           await new Promise((resolve) => setTimeout(resolve, 500))
@@ -52,21 +55,28 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
         }
 
         if (attempts >= maxAttempts) {
-          throw new Error("Iframe 4NK non disponible après 5 secondes")
+          throw new Error("Iframe 4NK non disponible après 10 secondes")
         }
 
         const messageBus = MessageBus.getInstance(iframeUrl)
 
         // Attendre que l'iframe soit prête
+        console.log("⏳ Vérification de la disponibilité de l'iframe...")
         await messageBus.isReady()
+        console.log("✅ Iframe prête")
+
         setIsIframeReady(true)
         setShowIframe(true)
 
         // Demander l'authentification
+        console.log("🔐 Demande d'authentification...")
         await messageBus.requestLink()
+        console.log("✅ Authentification acceptée")
 
         // Récupérer l'ID d'appairage
+        console.log("🆔 Récupération de l'ID d'appairage...")
         await messageBus.getUserPairingId()
+        console.log("✅ ID d'appairage récupéré")
 
         setAuthSuccess(true)
 
@@ -75,8 +85,18 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
           onConnect()
         }, 500)
       } catch (err) {
-        console.error("Authentication error:", err)
-        setError(err instanceof Error ? err.message : "Erreur d'authentification")
+        console.error("❌ Authentication error:", err)
+        const errorMessage = err instanceof Error ? err.message : "Erreur d'authentification"
+
+        // Messages d'erreur plus spécifiques
+        if (errorMessage.includes("origin")) {
+          setError("Erreur de configuration : les domaines ne correspondent pas. Vérifiez la configuration 4NK.")
+        } else if (errorMessage.includes("Timeout")) {
+          setError("Timeout : L'iframe 4NK ne répond pas. Vérifiez votre connexion.")
+        } else {
+          setError(errorMessage)
+        }
+
         setIsIframeReady(false)
         setShowIframe(false)
       } finally {
