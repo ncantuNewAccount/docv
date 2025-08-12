@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Key, ArrowLeft, Eye, Globe, Server } from 'lucide-react'
+import { Shield, Key, ArrowLeft, Eye, Globe, Server } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 export default function LoginPage() {
@@ -30,9 +30,7 @@ export default function LoginPage() {
               <Key className="h-6 w-6 mr-2 text-blue-600" />
               Connexion cryptographique
             </CardTitle>
-            <CardDescription>
-              Login ultra-simplifié sans mot de passe traditionnel
-            </CardDescription>
+            <CardDescription>Login ultra-simplifié sans mot de passe traditionnel</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Sovereign Space Notice */}
@@ -42,7 +40,7 @@ export default function LoginPage() {
                 <div>
                   <h4 className="font-semibold text-green-800 mb-2">🌐 Espace Souverain</h4>
                   <p className="text-sm text-green-700 mb-2">
-                    Après connexion, vous serez redirigé vers votre espace souverain 
+                    Après connexion, vous serez redirigé vers votre espace souverain
                     <strong> hors cloud</strong>, hébergé sur votre infrastructure.
                   </p>
                   <ul className="text-xs text-green-600 space-y-1">
@@ -79,19 +77,21 @@ export default function LoginPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="identifier">Identifiant d'entreprise</Label>
-                <Input 
-                  id="identifier" 
-                  type="text" 
+                <Input
+                  id="identifier"
+                  type="text"
                   placeholder="Votre identifiant unique"
                   className="border-gray-300 focus:border-blue-500"
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
-              <Globe className="h-4 w-4 mr-2" />
-              Accéder à mon espace souverain
-            </Button>
+            <Link href="/dashboard">
+              <Button type="submit" className="w-full">
+                <Globe className="h-4 w-4 mr-2" />
+                Accéder à mon espace souverain
+              </Button>
+            </Link>
 
             {/* Demo Request */}
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -100,7 +100,10 @@ export default function LoginPage() {
                 Pas encore de compte ? Demandez une démonstration personnalisée avant de vous inscrire.
               </p>
               <Link href="/contact">
-                <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-50">
+                <Button
+                  variant="outline"
+                  className="w-full border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
+                >
                   <Eye className="h-4 w-4 mr-2" />
                   Demander une démo avant de créer un compte
                 </Button>
@@ -134,7 +137,7 @@ export default function LoginPage() {
         {/* Contact */}
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
-            Support technique : 
+            Support technique :
             <a href="mailto:contact@docv.fr" className="text-blue-600 hover:text-blue-700 ml-1">
               contact@docv.fr
             </a>
