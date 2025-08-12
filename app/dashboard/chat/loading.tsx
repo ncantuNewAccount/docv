@@ -1,31 +1,30 @@
-import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ChatLoading() {
   return (
     <div className="h-[calc(100vh-8rem)] flex">
-      {/* Sidebar Skeleton */}
+      {/* Sidebar */}
       <div className="w-80 border-r bg-white flex flex-col">
-        {/* Header Skeleton */}
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-4">
-            <div className="h-6 bg-gray-200 rounded w-24 animate-pulse"></div>
-            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-8 w-8" />
           </div>
-          <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+          <Skeleton className="h-10 w-full" />
         </div>
 
-        {/* Conversations List Skeleton */}
         <div className="flex-1 overflow-y-auto">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="p-4 border-b">
               <div className="flex items-start space-x-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse"></div>
-                <div className="flex-1 space-y-2">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
-                    <div className="h-3 bg-gray-200 rounded w-12 animate-pulse"></div>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-12" />
                   </div>
-                  <div className="h-3 bg-gray-200 rounded w-32 animate-pulse"></div>
+                  <Skeleton className="h-3 w-32 mt-2" />
+                  <Skeleton className="h-3 w-16 mt-1" />
                 </div>
               </div>
             </div>
@@ -33,44 +32,45 @@ export default function ChatLoading() {
         </div>
       </div>
 
-      {/* Main Chat Area Skeleton */}
+      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Chat Header Skeleton */}
+        {/* Header */}
         <div className="p-4 border-b bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                <div className="h-3 bg-gray-200 rounded w-20 animate-pulse"></div>
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div>
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20 mt-1" />
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-8 w-8" />
             </div>
           </div>
         </div>
 
-        {/* Messages Skeleton */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
-              <div className="max-w-xs lg:max-w-md">
-                <div className="h-16 bg-gray-200 rounded-lg animate-pulse"></div>
+              <div className={`max-w-xs lg:max-w-md p-4 rounded-lg ${i % 2 === 0 ? "bg-white" : "bg-blue-600"}`}>
+                <Skeleton className={`h-4 w-48 ${i % 2 !== 0 ? "bg-blue-500" : ""}`} />
+                <Skeleton className={`h-3 w-16 mt-2 ${i % 2 !== 0 ? "bg-blue-500" : ""}`} />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Message Input Skeleton */}
+        {/* Input */}
         <div className="p-4 border-t bg-white">
           <div className="flex items-end space-x-2">
-            <div className="h-10 w-10 bg-gray-200 rounded animate-pulse"></div>
-            <div className="flex-1 h-10 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-10 w-10 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-10 w-16 bg-gray-200 rounded animate-pulse"></div>
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-20 flex-1" />
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-16" />
           </div>
         </div>
       </div>

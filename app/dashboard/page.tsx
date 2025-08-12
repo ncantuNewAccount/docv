@@ -1,5 +1,4 @@
 "use client"
-import { X } from "lucide-react" // Import the X icon
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +22,9 @@ import {
   Edit,
   Share2,
   TestTube,
+  Zap,
+  HardDrive,
+  X,
 } from "lucide-react"
 import { MessageBus } from "@/lib/4nk/MessageBus"
 import Link from "next/link"
@@ -36,6 +38,15 @@ export default function DashboardPage() {
     storageUsed: 0,
     storageLimit: 100,
     recentActivity: 0,
+    // Nouveaux indicateurs
+    permanentStorage: 0,
+    permanentStorageLimit: 1000, // 1 To en Go
+    temporaryStorage: 0,
+    temporaryStorageLimit: 100, // 100 Mo
+    newFoldersThisMonth: 0,
+    newFoldersLimit: 75,
+    tokensUsed: 0,
+    tokensTotal: 1000,
   })
 
   const [recentDocuments, setRecentDocuments] = useState<any[]>([])
@@ -57,6 +68,15 @@ export default function DashboardPage() {
         storageUsed: 67.3,
         storageLimit: 100,
         recentActivity: 24,
+        // Nouveaux indicateurs avec données réalistes
+        permanentStorage: 673, // 673 Go utilisés sur 1000 Go
+        permanentStorageLimit: 1000,
+        temporaryStorage: 45, // 45 Mo utilisés sur 100 Mo
+        temporaryStorageLimit: 100,
+        newFoldersThisMonth: 23, // 23 nouveaux dossiers ce mois
+        newFoldersLimit: 75,
+        tokensUsed: 673, // Environ 67% des jetons utilisés
+        tokensTotal: 1000,
       })
 
       setRecentDocuments([
@@ -179,9 +199,9 @@ export default function DashboardPage() {
         {
           id: "notif_002",
           type: "warning",
-          title: "Révision requise",
-          message: "Le rapport financier Q1 nécessite votre validation",
-          time: "Il y a 3 heures",
+          title: "Stockage temporaire élevé",
+          message: "45 Mo utilisés sur 100 Mo de stockage temporaire ce mois",
+          time: "Il y a 2 heures",
           icon: AlertCircle,
           color: "text-orange-600",
           bgColor: "bg-orange-50",
@@ -292,16 +312,85 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stockage</CardTitle>
+            <CardTitle className="text-sm font-medium">Jetons utilisés</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.storageUsed}%</div>
+            <div className="text-2xl font-bold">{stats.tokensUsed}</div>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${stats.storageUsed}%` }}></div>
+              <div
+                className="bg-blue-600 h-2 rounded-full"
+                style={{ width: `${(stats.tokensUsed / stats.tokensTotal) * 100}%` }}
+              ></div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.storageUsed} GB / {stats.storageLimit} GB utilisés
+              {stats.tokensUsed} / {stats.tokensTotal} jetons
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Nouveaux indicateurs de stockage */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stockage permanent</CardTitle>
+            <HardDrive className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.permanentStorage} Go</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full"
+                style={{ width: `${(stats.permanentStorage / stats.permanentStorageLimit) * 100}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.permanentStorage} Go / {stats.permanentStorageLimit} Go (1 To)
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stockage temporaire</CardTitle>
+            <Zap className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.temporaryStorage} Mo</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div
+                className={`h-2 rounded-full ${
+                  stats.temporaryStorage > 80
+                    ? "bg-red-600"
+                    : stats.temporaryStorage > 60
+                      ? "bg-orange-600"
+                      : "bg-green-600"
+                }`}
+                style={{ width: `${(stats.temporaryStorage / stats.temporaryStorageLimit) * 100}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.temporaryStorage} Mo / {stats.temporaryStorageLimit} Mo ce mois
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Nouveaux dossiers</CardTitle>
+            <Plus className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.newFoldersThisMonth}</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div
+                className="bg-green-600 h-2 rounded-full"
+                style={{ width: `${(stats.newFoldersThisMonth / stats.newFoldersLimit) * 100}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.newFoldersThisMonth} / {stats.newFoldersLimit} ce mois
             </p>
           </CardContent>
         </Card>

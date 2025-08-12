@@ -1,27 +1,28 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function UsersLoading() {
   return (
     <div className="space-y-6">
-      {/* Header Skeleton */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
         </div>
-        <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
+        <Skeleton className="h-10 w-48 mt-4 sm:mt-0" />
       </div>
 
-      {/* Stats Skeleton */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                <div className="ml-4 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-                  <div className="h-6 bg-gray-200 rounded w-8 animate-pulse"></div>
+                <Skeleton className="h-8 w-8" />
+                <div className="ml-4">
+                  <Skeleton className="h-4 w-16 mb-2" />
+                  <Skeleton className="h-8 w-12" />
                 </div>
               </div>
             </CardContent>
@@ -29,43 +30,41 @@ export default function UsersLoading() {
         ))}
       </div>
 
-      {/* Filters Skeleton */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 h-10 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-full sm:w-48 h-10 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-full sm:w-48 h-10 bg-gray-200 rounded animate-pulse"></div>
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-48" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Table Skeleton */}
+      {/* Table */}
       <Card>
         <CardHeader>
-          <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
+          <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4 p-4 border-b">
-                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                    <div className="h-3 bg-gray-200 rounded w-48 animate-pulse"></div>
-                  </div>
+              <div key={i} className="flex items-center space-x-4 p-4">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-32 mb-2" />
+                  <Skeleton className="h-3 w-48" />
                 </div>
-                <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
-                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-8 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-20" />
                 <div className="flex space-x-2">
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
                 </div>
               </div>
             ))}
