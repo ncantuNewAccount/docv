@@ -39,7 +39,7 @@ export class MessageBus {
     }
   }
 
-  private sendMessage(type: string, data: any = {}): Promise<any> {
+  private sendMessage(type: string, data: any = {}, timeoutMs = 30000): Promise<any> {
     return new Promise((resolve, reject) => {
       const correlationId = uuidv4()
       const iframe = IframeReference.getIframe()
@@ -56,38 +56,81 @@ export class MessageBus {
         type,
         correlationId,
         accessToken,
+        timestamp: Date.now(),
         ...data,
       }
 
       console.log(`📤 Sending message ${type} to origin:`, targetOrigin)
+      console.log(`📤 Message data:`, { type, correlationId, hasAccessToken: !!accessToken })
 
-      const cleanup = this.initMessageListener(correlationId, resolve, reject)
+      const cleanup = this.initMessageListener(correlationId, resolve, reject, timeoutMs)
 
-      try {
-        iframe.contentWindow.postMessage(message, targetOrigin)
-      } catch (error) {
-        console.error("❌ PostMessage error:", error)
-        console.log("🔄 Trying with wildcard origin...")
+      // Essayer d'envoyer le message avec plusieurs stratégies
+      const sendStrategies = [
+        () => iframe.contentWindow!.postMessage(message, targetOrigin),
+        () => iframe.contentWindow!.postMessage(message, "*"),
+        () => {
+          // Attendre un peu et réessayer
+          setTimeout(() => {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.postMessage(message, targetOrigin)
+            }
+          }, 1000)
+        },
+      ]
+
+      let strategyIndex = 0
+      const trySend = () => {
+        if (strategyIndex >= sendStrategies.length) {
+          cleanup()
+          reject(new Error("Impossible d'envoyer le message après plusieurs tentatives"))
+          return
+        }
 
         try {
-          iframe.contentWindow.postMessage(message, "*")
-        } catch (fallbackError) {
-          cleanup()
-          reject(new Error(`Communication failed: ${error.message}`))
+          sendStrategies[strategyIndex]()
+          console.log(`✅ Message sent with strategy ${strategyIndex + 1}`)
+        } catch (error) {
+          console.error(`❌ Strategy ${strategyIndex + 1} failed:`, error)
+          strategyIndex++
+          setTimeout(trySend, 500)
         }
       }
+
+      trySend()
     })
   }
 
-  private initMessageListener(correlationId: string, resolve: Function, reject: Function): () => void {
-    const handleMessage = (event: MessageEvent) => {
-      console.log("📥 Received message from:", event.origin, "Type:", event.data.type)
+  private initMessageListener(
+    correlationId: string,
+    resolve: Function,
+    reject: Function,
+    timeoutMs: number,
+  ): () => void {
+    const timeout = setTimeout(() => {
+      cleanup()
+      reject(new Error(`Timeout: Aucune réponse après ${timeoutMs / 1000} secondes`))
+    }, timeoutMs)
 
-      // Accepter les messages de domaines 4NK
-      const is4NKOrigin = event.origin.includes("4nk") || event.origin.includes("localhost")
+    const handleMessage = (event: MessageEvent) => {
+      console.log(
+        "📥 Received message from:",
+        event.origin,
+        "Type:",
+        event.data.type,
+        "CorrelationId:",
+        event.data.correlationId,
+      )
+
+      // Accepter les messages de domaines 4NK ou localhost
+      const is4NKOrigin =
+        event.origin.includes("4nk") ||
+        event.origin.includes("localhost") ||
+        event.origin.includes("127.0.0.1") ||
+        event.origin === "null" // Pour les iframes en mode file://
 
       if (!is4NKOrigin) {
-        console.log("🚫 Message ignored - not from 4NK origin")
+        console.log("🚫 Message ignored - not from 4NK origin:", event.origin)
         return
       }
 
@@ -102,12 +145,13 @@ export class MessageBus {
         console.error("❌ Received error:", event.data.message)
         reject(new Error(event.data.message || "Unknown error"))
       } else {
-        console.log("✅ Message processed successfully")
+        console.log("✅ Message processed successfully:", event.data.type)
         resolve(event.data)
       }
     }
 
     const cleanup = () => {
+      clearTimeout(timeout)
       window.removeEventListener("message", handleMessage)
     }
 
@@ -115,7 +159,7 @@ export class MessageBus {
     return cleanup
   }
 
-  // Méthodes d'authentification
+  // Méthodes d'authentification avec timeouts plus longs
   async isReady(): Promise<void> {
     return new Promise((resolve, reject) => {
       const correlationId = uuidv4()
@@ -129,11 +173,15 @@ export class MessageBus {
       const targetOrigin = this.getOriginFromUrl(this.origin)
       console.log("🔍 Checking if iframe is ready, target origin:", targetOrigin)
 
-      // Timeout de 15 secondes
+      // Timeout de 45 secondes pour isReady
       const timeout = setTimeout(() => {
         cleanup()
-        reject(new Error("Timeout: Iframe 4NK ne répond pas après 15 secondes"))
-      }, 15000)
+        reject(
+          new Error(
+            "Timeout: L'iframe 4NK ne répond pas après 45 secondes. Vérifiez votre connexion internet et l'URL de l'iframe.",
+          ),
+        )
+      }, 45000)
 
       const cleanup = () => {
         clearTimeout(timeout)
@@ -141,13 +189,24 @@ export class MessageBus {
       }
 
       const handleMessage = (event: MessageEvent) => {
-        console.log("📥 Ready check - received from:", event.origin)
+        console.log("📥 Ready check - received from:", event.origin, "Type:", event.data.type)
 
         // Accepter les messages de domaines 4NK
-        const is4NKOrigin = event.origin.includes("4nk") || event.origin.includes("localhost")
+        const is4NKOrigin =
+          event.origin.includes("4nk") ||
+          event.origin.includes("localhost") ||
+          event.origin.includes("127.0.0.1") ||
+          event.origin === "null"
 
-        if (!is4NKOrigin) return
-        if (event.data.correlationId !== correlationId) return
+        if (!is4NKOrigin) {
+          console.log("🚫 Ready check ignored - not from 4NK origin")
+          return
+        }
+
+        if (event.data.correlationId !== correlationId) {
+          console.log("🚫 Ready check ignored - correlation ID mismatch")
+          return
+        }
 
         cleanup()
 
@@ -162,30 +221,54 @@ export class MessageBus {
 
       window.addEventListener("message", handleMessage)
 
-      try {
-        iframe.contentWindow.postMessage(
-          {
-            type: "IS_READY",
-            correlationId,
-          },
-          targetOrigin,
-        )
-      } catch (error) {
-        console.log("🔄 Fallback to wildcard origin for ready check")
-        iframe.contentWindow.postMessage(
-          {
-            type: "IS_READY",
-            correlationId,
-          },
-          "*",
-        )
+      // Envoyer le message de vérification avec plusieurs tentatives
+      const sendReadyCheck = (attempt = 1) => {
+        if (attempt > 5) {
+          cleanup()
+          reject(new Error("Impossible de communiquer avec l'iframe après 5 tentatives"))
+          return
+        }
+
+        console.log(`🔄 Sending ready check, attempt ${attempt}/5`)
+
+        try {
+          iframe.contentWindow!.postMessage(
+            {
+              type: "IS_READY",
+              correlationId,
+              timestamp: Date.now(),
+              attempt,
+            },
+            targetOrigin,
+          )
+        } catch (error) {
+          console.log(`🔄 Attempt ${attempt} failed, trying wildcard...`)
+          try {
+            iframe.contentWindow!.postMessage(
+              {
+                type: "IS_READY",
+                correlationId,
+                timestamp: Date.now(),
+                attempt,
+              },
+              "*",
+            )
+          } catch (fallbackError) {
+            console.error(`❌ Both attempts ${attempt} failed:`, error, fallbackError)
+          }
+        }
+
+        // Réessayer après un délai croissant
+        setTimeout(() => sendReadyCheck(attempt + 1), attempt * 2000)
       }
+
+      sendReadyCheck()
     })
   }
 
   async requestLink(): Promise<void> {
     console.log("🔐 Requesting authentication link...")
-    const response = await this.sendMessage("REQUEST_LINK")
+    const response = await this.sendMessage("REQUEST_LINK", {}, 60000) // 60 secondes pour l'auth
 
     if (response.type === "LINK_ACCEPTED") {
       console.log("✅ Authentication link accepted")
@@ -198,7 +281,7 @@ export class MessageBus {
 
   async getUserPairingId(): Promise<string> {
     console.log("🆔 Getting user pairing ID...")
-    const response = await this.sendMessage("GET_PAIRING_ID")
+    const response = await this.sendMessage("GET_PAIRING_ID", {}, 30000)
     const pairingId = response.userPairingId
     this.userStore.pair(pairingId)
     console.log("✅ User pairing ID retrieved:", pairingId?.slice(0, 8) + "...")
@@ -207,7 +290,7 @@ export class MessageBus {
 
   async validateToken(): Promise<boolean> {
     try {
-      const response = await this.sendMessage("VALIDATE_TOKEN")
+      const response = await this.sendMessage("VALIDATE_TOKEN", {}, 15000)
       return response.valid === true
     } catch {
       return false
@@ -215,9 +298,13 @@ export class MessageBus {
   }
 
   async renewToken(): Promise<void> {
-    const response = await this.sendMessage("RENEW_TOKEN", {
-      refreshToken: this.userStore.getRefreshToken(),
-    })
+    const response = await this.sendMessage(
+      "RENEW_TOKEN",
+      {
+        refreshToken: this.userStore.getRefreshToken(),
+      },
+      30000,
+    )
 
     if (response.type === "TOKEN_RENEWED") {
       this.userStore.connect(response.accessToken, response.refreshToken)
@@ -226,34 +313,42 @@ export class MessageBus {
 
   // Méthodes de gestion des process
   async getProcesses(): Promise<any> {
-    return this.sendMessage("GET_PROCESSES")
+    return this.sendMessage("GET_PROCESSES", {}, 20000)
   }
 
   async getMyProcesses(): Promise<string[]> {
-    const response = await this.sendMessage("GET_MY_PROCESSES")
+    const response = await this.sendMessage("GET_MY_PROCESSES", {}, 20000)
     return response.processIds || []
   }
 
   async getData(processId: string, stateId: string): Promise<Record<string, any>> {
-    return this.sendMessage("RETRIEVE_DATA", { processId, stateId })
+    return this.sendMessage("RETRIEVE_DATA", { processId, stateId }, 20000)
   }
 
   async createProfile(profileData: any, privateFields: string[], roles: any): Promise<any> {
-    return this.sendMessage("CREATE_PROCESS", {
-      processType: "profile",
-      data: profileData,
-      privateFields,
-      roles,
-    })
+    return this.sendMessage(
+      "CREATE_PROCESS",
+      {
+        processType: "profile",
+        data: profileData,
+        privateFields,
+        roles,
+      },
+      30000,
+    )
   }
 
   async createFolder(folderData: any, privateFields: string[], roles: any): Promise<any> {
-    return this.sendMessage("CREATE_PROCESS", {
-      processType: "folder",
-      data: folderData,
-      privateFields,
-      roles,
-    })
+    return this.sendMessage(
+      "CREATE_PROCESS",
+      {
+        processType: "folder",
+        data: folderData,
+        privateFields,
+        roles,
+      },
+      30000,
+    )
   }
 
   async updateProcess(
@@ -263,20 +358,24 @@ export class MessageBus {
     privateFields: string[],
     roles: any,
   ): Promise<any> {
-    return this.sendMessage("UPDATE_PROCESS", {
-      processId,
-      lastStateId,
-      data: newData,
-      privateFields,
-      roles,
-    })
+    return this.sendMessage(
+      "UPDATE_PROCESS",
+      {
+        processId,
+        lastStateId,
+        data: newData,
+        privateFields,
+        roles,
+      },
+      30000,
+    )
   }
 
   async notifyProcessUpdate(processId: string, stateId: string): Promise<void> {
-    return this.sendMessage("NOTIFY_UPDATE", { processId, stateId })
+    return this.sendMessage("NOTIFY_UPDATE", { processId, stateId }, 15000)
   }
 
   async validateState(processId: string, stateId: string): Promise<any> {
-    return this.sendMessage("VALIDATE_STATE", { processId, stateId })
+    return this.sendMessage("VALIDATE_STATE", { processId, stateId }, 20000)
   }
 }
