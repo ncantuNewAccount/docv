@@ -391,6 +391,57 @@ export default function HomePage() {
                   </div>
                 </div>
 
+                {/* Architecture de stockage détaillée */}
+                <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-lg mb-6">
+                  <h4 className="font-semibold text-gray-800 mb-4 text-center">
+                    🏗️ Architecture de stockage souveraine
+                  </h4>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-white p-4 rounded-lg border border-green-200">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Zap className="h-5 w-5 text-green-600" />
+                        <h5 className="font-semibold text-green-800">Stockage Temporaire</h5>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">
+                        <strong>Store chiffré local, distribué strictement en parties prenantes</strong>
+                      </p>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Accès rapide pour modifications</li>
+                        <li>• Chiffrement bout en bout</li>
+                        <li>• Distribution contrôlée</li>
+                        <li>• Traitement IA local</li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border border-blue-200">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Database className="h-5 w-5 text-blue-600" />
+                        <h5 className="font-semibold text-blue-800">Stockage Permanent</h5>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">
+                        <strong>
+                          Store chiffré d'archivage local, distribué strictement en parties prenantes et sur un serveur
+                          de backup sans accès aux données compatible avec du cold storage
+                        </strong>
+                      </p>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>• Conservation longue durée</li>
+                        <li>• Lecture seule sécurisée</li>
+                        <li>• Backup cold storage</li>
+                        <li>• Extraction IA pour data room distribuée</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                    <p className="text-sm text-blue-800 text-center">
+                      <strong>🔐 Souveraineté totale :</strong> Vos données restent sous votre contrôle exclusif, même
+                      en backup
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-green-600 mr-3" />

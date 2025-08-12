@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   FileText,
@@ -17,7 +18,6 @@ import {
   Plus,
   Upload,
   Download,
-  Share2,
   Eye,
   Edit,
   Trash2,
@@ -31,7 +31,109 @@ import {
   Archive,
   SortAsc,
   SortDesc,
+  X,
+  Copy,
+  Move,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Info,
+  UserPlus,
+  FileQuestion,
+  ShieldCheck,
+  ShieldX,
+  BadgeIcon as Certificate,
+  Send,
+  Cloud,
+  HardDrive,
+  CloudUpload,
+  Users,
+  Crown,
+  Shield,
+  User,
+  Calendar,
+  Database,
+  Zap,
+  Server,
+  Snowflake,
 } from "lucide-react"
+
+interface Document {
+  id: number
+  name: string
+  type: string
+  size: string
+  modified: Date
+  created: Date
+  author: string
+  folder: string
+  folderId: string
+  tags: string[]
+  favorite: boolean
+  status: string
+  thumbnail: string
+  description?: string
+  version: string
+  isValidated: boolean
+  hasCertificate: boolean
+  summary?: string
+  storageType: "temporary" | "permanent"
+  permissions: {
+    canView: boolean
+    canEdit: boolean
+    canDelete: boolean
+    canInvite: boolean
+    canValidate: boolean
+    canArchive: boolean
+  }
+}
+
+interface ActionModal {
+  type:
+    | "view"
+    | "edit"
+    | "invite"
+    | "delete"
+    | "move"
+    | "rename"
+    | "request"
+    | "validate"
+    | "certificate"
+    | "archive"
+    | null
+  document: Document | null
+  documents: Document[]
+}
+
+interface UserWithRoles {
+  id: string
+  name: string
+  email: string
+  avatar: string
+  // Rôles sur le dossier spécifique
+  folderRoles: {
+    [folderId: string]: {
+      role: "owner" | "editor" | "viewer" | "validator" | "contributor"
+      assignedDate: Date
+    }
+  }
+  // Rôle principal dans l'espace
+  spaceRole: "admin" | "manager" | "user" | "guest"
+  // Rôles par espaces (si multi-espaces)
+  spaceRoles: {
+    [spaceId: string]: {
+      role: "admin" | "manager" | "user" | "guest"
+      spaceName: string
+    }
+  }
+}
+
+interface Role {
+  id: string
+  name: string
+  description: string
+  level: "folder" | "space" | "global"
+}
 
 export default function DocumentsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
@@ -41,20 +143,173 @@ export default function DocumentsPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [filterType, setFilterType] = useState("all")
   const [filterAuthor, setFilterAuthor] = useState("all")
+  const [filterStorage, setFilterStorage] = useState("all")
   const [showFilters, setShowFilters] = useState(false)
+  const [actionModal, setActionModal] = useState<ActionModal>({ type: null, document: null, documents: [] })
 
-  const [documents, setDocuments] = useState<any[]>([])
+  // Modal states
+  const [inviteMessage, setInviteMessage] = useState("")
+  const [selectedUser, setSelectedUser] = useState("")
+  const [selectedRole, setSelectedRole] = useState("")
+  const [inviteScope, setInviteScope] = useState<"user" | "role">("user")
+  const [newFolderName, setNewFolderName] = useState("")
+  const [newDocumentName, setNewDocumentName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editAttachment, setEditAttachment] = useState<File | null>(null)
+  const [editMessage, setEditMessage] = useState("")
+  const [requestDocumentName, setRequestDocumentName] = useState("")
+  const [requestMessage, setRequestMessage] = useState("")
+  const [archiveReason, setArchiveReason] = useState("")
+  const [retentionPeriod, setRetentionPeriod] = useState("5") // Nouvelle période de conservation
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
+
+  const [documents, setDocuments] = useState<Document[]>([])
   const [stats, setStats] = useState({
     total: 0,
     thisWeek: 0,
-    shared: 0,
+    validated: 0,
     favorites: 0,
+    permanent: 0,
+    temporary: 0,
   })
+
+  const [folders] = useState([
+    { id: "contracts", name: "Contrats" },
+    { id: "reports", name: "Rapports" },
+    { id: "projects", name: "Projets" },
+    { id: "finance", name: "Finance" },
+    { id: "policies", name: "Politiques" },
+    { id: "training", name: "Formation" },
+    { id: "assets", name: "Assets" },
+    { id: "archives", name: "Archives" },
+  ])
+
+  const [users] = useState<UserWithRoles[]>([
+    {
+      id: "1",
+      name: "Marie Dubois",
+      email: "marie.dubois@company.com",
+      avatar: "MD",
+      folderRoles: {
+        contracts: { role: "owner", assignedDate: new Date("2024-01-01") },
+        finance: { role: "editor", assignedDate: new Date("2024-01-05") },
+      },
+      spaceRole: "manager",
+      spaceRoles: {
+        main: { role: "manager", spaceName: "Espace Principal" },
+        legal: { role: "admin", spaceName: "Espace Juridique" },
+      },
+    },
+    {
+      id: "2",
+      name: "Sophie Laurent",
+      email: "sophie.laurent@company.com",
+      avatar: "SL",
+      folderRoles: {
+        reports: { role: "owner", assignedDate: new Date("2024-01-02") },
+        projects: { role: "contributor", assignedDate: new Date("2024-01-10") },
+      },
+      spaceRole: "user",
+      spaceRoles: {
+        main: { role: "user", spaceName: "Espace Principal" },
+        analytics: { role: "manager", spaceName: "Espace Analytics" },
+      },
+    },
+    {
+      id: "3",
+      name: "Jean Martin",
+      email: "jean.martin@company.com",
+      avatar: "JM",
+      folderRoles: {
+        projects: { role: "owner", assignedDate: new Date("2024-01-03") },
+        reports: { role: "viewer", assignedDate: new Date("2024-01-15") },
+      },
+      spaceRole: "user",
+      spaceRoles: {
+        main: { role: "user", spaceName: "Espace Principal" },
+        projects: { role: "admin", spaceName: "Espace Projets" },
+      },
+    },
+    {
+      id: "4",
+      name: "Pierre Durand",
+      email: "pierre.durand@company.com",
+      avatar: "PD",
+      folderRoles: {
+        training: { role: "owner", assignedDate: new Date("2024-01-04") },
+        policies: { role: "validator", assignedDate: new Date("2024-01-08") },
+      },
+      spaceRole: "user",
+      spaceRoles: {
+        main: { role: "user", spaceName: "Espace Principal" },
+        training: { role: "admin", spaceName: "Espace Formation" },
+      },
+    },
+    {
+      id: "5",
+      name: "Admin Système",
+      email: "admin@company.com",
+      avatar: "AD",
+      folderRoles: {
+        policies: { role: "owner", assignedDate: new Date("2024-01-01") },
+        archives: { role: "owner", assignedDate: new Date("2024-01-01") },
+        contracts: { role: "validator", assignedDate: new Date("2024-01-01") },
+        finance: { role: "validator", assignedDate: new Date("2024-01-01") },
+      },
+      spaceRole: "admin",
+      spaceRoles: {
+        main: { role: "admin", spaceName: "Espace Principal" },
+        legal: { role: "admin", spaceName: "Espace Juridique" },
+        analytics: { role: "admin", spaceName: "Espace Analytics" },
+        projects: { role: "admin", spaceName: "Espace Projets" },
+        training: { role: "admin", spaceName: "Espace Formation" },
+      },
+    },
+  ])
+
+  const [roles] = useState<Role[]>([
+    // Rôles sur dossier
+    {
+      id: "folder-owner",
+      name: "Propriétaire du dossier",
+      description: "Contrôle total sur le dossier",
+      level: "folder",
+    },
+    { id: "folder-editor", name: "Éditeur du dossier", description: "Peut modifier les documents", level: "folder" },
+    {
+      id: "folder-validator",
+      name: "Validateur du dossier",
+      description: "Peut valider les documents",
+      level: "folder",
+    },
+    {
+      id: "folder-contributor",
+      name: "Contributeur du dossier",
+      description: "Peut ajouter des documents",
+      level: "folder",
+    },
+    { id: "folder-viewer", name: "Lecteur du dossier", description: "Lecture seule", level: "folder" },
+
+    // Rôles dans l'espace
+    { id: "space-admin", name: "Administrateur d'espace", description: "Contrôle total sur l'espace", level: "space" },
+    {
+      id: "space-manager",
+      name: "Gestionnaire d'espace",
+      description: "Gestion des utilisateurs et dossiers",
+      level: "space",
+    },
+    { id: "space-user", name: "Utilisateur d'espace", description: "Accès standard à l'espace", level: "space" },
+    { id: "space-guest", name: "Invité d'espace", description: "Accès limité à l'espace", level: "space" },
+
+    // Rôles globaux
+    { id: "global-admin", name: "Administrateur global", description: "Accès à tous les espaces", level: "global" },
+    { id: "global-manager", name: "Gestionnaire global", description: "Gestion multi-espaces", level: "global" },
+  ])
 
   useEffect(() => {
     // Simuler le chargement des documents
     const loadDocuments = () => {
-      const mockDocuments = [
+      const mockDocuments: Document[] = [
         {
           id: 1,
           name: "Contrat_Client_ABC.pdf",
@@ -64,11 +319,26 @@ export default function DocumentsPage() {
           created: new Date("2024-01-15T09:00:00"),
           author: "Marie Dubois",
           folder: "Contrats",
+          folderId: "contracts",
           tags: ["contrat", "client", "juridique"],
-          shared: true,
           favorite: false,
-          status: "recent",
+          status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PDF",
+          description: "Contrat de prestation de services avec le client ABC Corp.",
+          version: "v1.2",
+          isValidated: true,
+          hasCertificate: true,
+          storageType: "permanent",
+          summary:
+            "Contrat de prestation de services d'une durée de 12 mois avec ABC Corp. Montant total : 150 000€ HT. Clauses de confidentialité et de propriété intellectuelle incluses.",
+          permissions: {
+            canView: true,
+            canEdit: true,
+            canDelete: true,
+            canInvite: true,
+            canValidate: true,
+            canArchive: false,
+          },
         },
         {
           id: 2,
@@ -79,11 +349,26 @@ export default function DocumentsPage() {
           created: new Date("2024-01-10T14:20:00"),
           author: "Sophie Laurent",
           folder: "Rapports",
+          folderId: "reports",
           tags: ["rapport", "mensuel", "analyse"],
-          shared: false,
           favorite: true,
-          status: "modified",
+          status: "pending",
           thumbnail: "/placeholder.svg?height=120&width=120&text=DOCX",
+          description: "Rapport mensuel d'activité pour novembre 2024.",
+          version: "v2.1",
+          isValidated: false,
+          hasCertificate: false,
+          storageType: "temporary",
+          summary:
+            "Rapport d'activité mensuel présentant les KPIs, les réalisations et les objectifs pour le mois de novembre. Croissance de 15% par rapport au mois précédent.",
+          permissions: {
+            canView: true,
+            canEdit: false,
+            canDelete: false,
+            canInvite: true,
+            canValidate: false,
+            canArchive: true,
+          },
         },
         {
           id: 3,
@@ -94,11 +379,26 @@ export default function DocumentsPage() {
           created: new Date("2024-01-12T11:30:00"),
           author: "Jean Martin",
           folder: "Projets",
+          folderId: "projects",
           tags: ["présentation", "projet", "alpha"],
-          shared: true,
           favorite: false,
-          status: "shared",
+          status: "draft",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PPTX",
+          description: "Présentation du projet Alpha pour le comité de direction.",
+          version: "v1.0",
+          isValidated: false,
+          hasCertificate: false,
+          storageType: "temporary",
+          summary:
+            "Présentation détaillée du projet Alpha incluant le planning, le budget prévisionnel de 500K€ et les ressources nécessaires. Lancement prévu en Q2 2024.",
+          permissions: {
+            canView: true,
+            canEdit: true,
+            canDelete: true,
+            canInvite: true,
+            canValidate: true,
+            canArchive: true,
+          },
         },
         {
           id: 4,
@@ -109,11 +409,26 @@ export default function DocumentsPage() {
           created: new Date("2024-01-08T09:45:00"),
           author: "Marie Dubois",
           folder: "Finance",
+          folderId: "finance",
           tags: ["budget", "2024", "finance"],
-          shared: false,
           favorite: true,
-          status: "normal",
+          status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=XLSX",
+          description: "Budget prévisionnel pour l'année 2024.",
+          version: "v3.0",
+          isValidated: true,
+          hasCertificate: true,
+          storageType: "permanent",
+          summary:
+            "Budget prévisionnel 2024 avec une allocation totale de 2.5M€. Répartition par département et projets stratégiques. Croissance prévue de 20%.",
+          permissions: {
+            canView: true,
+            canEdit: true,
+            canDelete: true,
+            canInvite: true,
+            canValidate: true,
+            canArchive: false,
+          },
         },
         {
           id: 5,
@@ -122,13 +437,28 @@ export default function DocumentsPage() {
           size: "1.1 MB",
           modified: new Date("2024-01-14T14:10:00"),
           created: new Date("2024-01-05T10:00:00"),
-          author: "Admin",
+          author: "Admin Système",
           folder: "Politiques",
+          folderId: "policies",
           tags: ["sécurité", "politique", "règlement"],
-          shared: true,
           favorite: false,
-          status: "important",
+          status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PDF",
+          description: "Politique de sécurité informatique de l'entreprise.",
+          version: "v1.0",
+          isValidated: true,
+          hasCertificate: true,
+          storageType: "permanent",
+          summary:
+            "Document officiel définissant les règles de sécurité informatique. Couvre la gestion des mots de passe, l'accès aux données et les procédures d'incident.",
+          permissions: {
+            canView: true,
+            canEdit: false,
+            canDelete: false,
+            canInvite: false,
+            canValidate: false,
+            canArchive: false,
+          },
         },
         {
           id: 6,
@@ -139,11 +469,26 @@ export default function DocumentsPage() {
           created: new Date("2024-01-13T11:30:00"),
           author: "Pierre Durand",
           folder: "Formation",
+          folderId: "training",
           tags: ["formation", "vidéo", "équipe"],
-          shared: false,
           favorite: false,
-          status: "normal",
+          status: "draft",
           thumbnail: "/placeholder.svg?height=120&width=120&text=MP4",
+          description: "Vidéo de formation pour la nouvelle équipe.",
+          version: "v1.0",
+          isValidated: false,
+          hasCertificate: false,
+          storageType: "temporary",
+          summary:
+            "Vidéo de formation de 45 minutes couvrant les processus internes, les outils utilisés et les bonnes pratiques. Destinée aux nouveaux collaborateurs.",
+          permissions: {
+            canView: true,
+            canEdit: true,
+            canDelete: true,
+            canInvite: true,
+            canValidate: true,
+            canArchive: true,
+          },
         },
         {
           id: 7,
@@ -154,11 +499,26 @@ export default function DocumentsPage() {
           created: new Date("2024-01-12T15:45:00"),
           author: "Design Team",
           folder: "Assets",
+          folderId: "assets",
           tags: ["logo", "design", "branding"],
-          shared: true,
           favorite: true,
-          status: "normal",
+          status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PNG",
+          description: "Logo officiel de l'entreprise en haute résolution.",
+          version: "v2.0",
+          isValidated: true,
+          hasCertificate: false,
+          storageType: "temporary",
+          summary:
+            "Logo officiel de l'entreprise en format PNG haute résolution (300 DPI). Versions couleur et monochrome disponibles pour tous supports de communication.",
+          permissions: {
+            canView: true,
+            canEdit: true,
+            canDelete: true,
+            canInvite: true,
+            canValidate: true,
+            canArchive: true,
+          },
         },
         {
           id: 8,
@@ -167,13 +527,28 @@ export default function DocumentsPage() {
           size: "128 MB",
           modified: new Date("2024-01-10T09:00:00"),
           created: new Date("2024-01-10T09:00:00"),
-          author: "Admin",
+          author: "Admin Système",
           folder: "Archives",
+          folderId: "archives",
           tags: ["archive", "2023", "backup"],
-          shared: false,
           favorite: false,
           status: "archived",
           thumbnail: "/placeholder.svg?height=120&width=120&text=ZIP",
+          description: "Archive complète des documents de l'année 2023.",
+          version: "v1.0",
+          isValidated: true,
+          hasCertificate: false,
+          storageType: "permanent",
+          summary:
+            "Archive complète contenant tous les documents de l'année 2023. Inclut les contrats, rapports, présentations et documents administratifs.",
+          permissions: {
+            canView: true,
+            canEdit: false,
+            canDelete: false,
+            canInvite: false,
+            canValidate: false,
+            canArchive: false,
+          },
         },
       ]
 
@@ -185,13 +560,470 @@ export default function DocumentsPage() {
           weekAgo.setDate(weekAgo.getDate() - 7)
           return doc.modified > weekAgo
         }).length,
-        shared: mockDocuments.filter((doc) => doc.shared).length,
+        validated: mockDocuments.filter((doc) => doc.isValidated).length,
         favorites: mockDocuments.filter((doc) => doc.favorite).length,
+        permanent: mockDocuments.filter((doc) => doc.storageType === "permanent").length,
+        temporary: mockDocuments.filter((doc) => doc.storageType === "temporary").length,
       })
     }
 
     loadDocuments()
   }, [])
+
+  // Notification system
+  const showNotification = (type: "success" | "error" | "info", message: string) => {
+    setNotification({ type, message })
+    setTimeout(() => setNotification(null), 3000)
+  }
+
+  // Fonction pour envoyer une notification dans le chat du dossier
+  const sendFolderChatNotification = (folderId: string, message: string, actionType: string, documentName?: string) => {
+    // Trouver tous les utilisateurs qui ont un rôle sur ce dossier
+    const folderUsers = users.filter((user) => user.folderRoles[folderId])
+
+    console.log("Notification envoyée dans le chat du dossier:", {
+      folderId,
+      folderName: folders.find((f) => f.id === folderId)?.name,
+      recipients: folderUsers.map((u) => ({ name: u.name, role: u.folderRoles[folderId]?.role })),
+      message,
+      actionType,
+      documentName,
+      timestamp: new Date().toISOString(),
+    })
+
+    // Simuler l'envoi de notifications push aux utilisateurs concernés
+    folderUsers.forEach((user) => {
+      console.log(`📱 Notification push envoyée à ${user.name} (${user.email})`)
+    })
+  }
+
+  // Fonction pour organiser les utilisateurs par rôles pour les invitations
+  const organizeUsersForInvitation = (currentFolderId: string) => {
+    const organized = {
+      folderRoles: {} as { [role: string]: UserWithRoles[] },
+      spaceRoles: {} as { [role: string]: UserWithRoles[] },
+      otherSpaces: {} as { [spaceName: string]: UserWithRoles[] },
+    }
+
+    users.forEach((user) => {
+      // Rôles sur le dossier actuel
+      if (user.folderRoles[currentFolderId]) {
+        const role = user.folderRoles[currentFolderId].role
+        if (!organized.folderRoles[role]) organized.folderRoles[role] = []
+        organized.folderRoles[role].push(user)
+      }
+
+      // Rôle principal dans l'espace
+      const spaceRole = user.spaceRole
+      if (!organized.spaceRoles[spaceRole]) organized.spaceRoles[spaceRole] = []
+      organized.spaceRoles[spaceRole].push(user)
+
+      // Autres espaces
+      Object.values(user.spaceRoles).forEach((spaceInfo) => {
+        if (spaceInfo.spaceName !== "Espace Principal") {
+          if (!organized.otherSpaces[spaceInfo.spaceName]) organized.otherSpaces[spaceInfo.spaceName] = []
+          organized.otherSpaces[spaceInfo.spaceName].push(user)
+        }
+      })
+    })
+
+    return organized
+  }
+
+  // Document actions
+  const handleViewDocument = (doc: Document) => {
+    setActionModal({ type: "view", document: doc, documents: [] })
+  }
+
+  const handleEditDocument = (doc: Document) => {
+    setEditDescription(doc.description || "")
+    setEditMessage("")
+    setEditAttachment(null)
+    setActionModal({ type: "edit", document: doc, documents: [] })
+  }
+
+  const handleInviteDocument = (doc: Document) => {
+    setInviteMessage("")
+    setSelectedUser("")
+    setSelectedRole("")
+    setInviteScope("user")
+    setActionModal({ type: "invite", document: doc, documents: [] })
+  }
+
+  const handleDeleteDocument = (doc: Document) => {
+    setActionModal({ type: "delete", document: doc, documents: [] })
+  }
+
+  const handleMoveDocument = (doc: Document) => {
+    setNewFolderName(doc.folder)
+    setActionModal({ type: "move", document: doc, documents: [] })
+  }
+
+  const handleRenameDocument = (doc: Document) => {
+    setNewDocumentName(doc.name)
+    setActionModal({ type: "rename", document: doc, documents: [] })
+  }
+
+  const handleDownloadDocument = (doc: Document) => {
+    const storageText = doc.storageType === "permanent" ? "stockage permanent" : "stockage temporaire"
+    showNotification("info", `Récupération de ${doc.name} du ${storageText}...`)
+
+    // Notification dans le chat du dossier
+    sendFolderChatNotification(doc.folderId, `📥 ${doc.name} a été récupéré du ${storageText}`, "download", doc.name)
+
+    setTimeout(() => {
+      showNotification("success", `${doc.name} récupéré avec succès`)
+    }, 1500)
+  }
+
+  const handleArchiveDocument = (doc: Document) => {
+    setArchiveReason("")
+    setRetentionPeriod("5")
+    setActionModal({ type: "archive", document: doc, documents: [] })
+  }
+
+  const handleRequestDocument = () => {
+    setRequestDocumentName("")
+    setRequestMessage("")
+    setActionModal({ type: "request", document: null, documents: [] })
+  }
+
+  const handleValidateDocument = (doc: Document) => {
+    setActionModal({ type: "validate", document: doc, documents: [] })
+  }
+
+  const handleViewCertificate = (doc: Document) => {
+    if (doc.hasCertificate) {
+      setActionModal({ type: "certificate", document: doc, documents: [] })
+    }
+  }
+
+  const handleToggleFavorite = (docId: number) => {
+    const doc = documents.find((d) => d.id === docId)
+    if (!doc) return
+
+    setDocuments((prev) => prev.map((d) => (d.id === docId ? { ...d, favorite: !d.favorite } : d)))
+
+    const action = doc.favorite ? "retiré des" : "ajouté aux"
+    showNotification("success", `${doc.name} ${action} favoris`)
+
+    // Notification dans le chat du dossier
+    sendFolderChatNotification(doc.folderId, `⭐ ${doc.name} a été ${action} favoris`, "favorite", doc.name)
+  }
+
+  // Bulk actions
+  const handleBulkDownload = () => {
+    const selectedDocs = documents.filter((doc) => selectedDocuments.includes(doc.id))
+    showNotification("info", `Récupération de ${selectedDocs.length} document(s)...`)
+
+    // Notifications dans les chats des dossiers concernés
+    const folderGroups = selectedDocs.reduce(
+      (acc, doc) => {
+        if (!acc[doc.folderId]) acc[doc.folderId] = []
+        acc[doc.folderId].push(doc.name)
+        return acc
+        acc[doc.folderId] = []
+        acc[doc.folderId].push(doc.name)
+        return acc
+      },
+      {} as { [folderId: string]: string[] },
+    )
+
+    Object.entries(folderGroups).forEach(([folderId, docNames]) => {
+      sendFolderChatNotification(
+        folderId,
+        `📥 ${docNames.length} document(s) récupéré(s) : ${docNames.join(", ")}`,
+        "bulk_download",
+      )
+    })
+
+    setTimeout(() => {
+      showNotification("success", `${selectedDocs.length} document(s) récupéré(s) avec succès`)
+      setSelectedDocuments([])
+    }, 2000)
+  }
+
+  const handleBulkArchive = () => {
+    const selectedDocs = documents.filter((doc) => selectedDocuments.includes(doc.id) && doc.permissions.canArchive)
+    if (selectedDocs.length === 0) {
+      showNotification("error", "Aucun document sélectionné ne peut être archivé")
+      return
+    }
+    setArchiveReason("")
+    setRetentionPeriod("5")
+    setActionModal({ type: "archive", document: null, documents: selectedDocs })
+  }
+
+  const handleBulkMove = () => {
+    const selectedDocs = documents.filter((doc) => selectedDocuments.includes(doc.id))
+    setNewFolderName("")
+    setActionModal({ type: "move", document: null, documents: selectedDocs })
+  }
+
+  const handleBulkDelete = () => {
+    const selectedDocs = documents.filter((doc) => selectedDocuments.includes(doc.id))
+    setActionModal({ type: "delete", document: null, documents: selectedDocs })
+  }
+
+  // Modal actions
+  const confirmInvite = () => {
+    if (actionModal.document) {
+      const recipient =
+        inviteScope === "user"
+          ? users.find((u) => u.id === selectedUser)?.name
+          : roles.find((r) => r.id === selectedRole)?.name
+
+      showNotification("success", `${actionModal.document.name} partagé avec ${recipient}. Un message a été envoyé.`)
+
+      // Notification dans le chat du dossier
+      sendFolderChatNotification(
+        actionModal.document.folderId,
+        `👥 ${actionModal.document.name} a été partagé avec ${recipient}. Message: ${inviteMessage}`,
+        "invite",
+        actionModal.document.name,
+      )
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmDelete = () => {
+    if (actionModal.document) {
+      // Notification dans le chat du dossier avant suppression
+      sendFolderChatNotification(
+        actionModal.document.folderId,
+        `🗑️ ${actionModal.document.name} a été supprimé`,
+        "delete",
+        actionModal.document.name,
+      )
+
+      setDocuments((prev) => prev.filter((doc) => doc.id !== actionModal.document!.id))
+      showNotification("success", `${actionModal.document.name} supprimé`)
+    } else if (actionModal.documents.length > 0) {
+      // Notifications dans les chats des dossiers concernés
+      const folderGroups = actionModal.documents.reduce(
+        (acc, doc) => {
+          if (!acc[doc.folderId]) acc[doc.folderId] = []
+          acc[doc.folderId].push(doc.name)
+          return acc
+        },
+        {} as { [folderId: string]: string[] },
+      )
+
+      Object.entries(folderGroups).forEach(([folderId, docNames]) => {
+        sendFolderChatNotification(
+          folderId,
+          `🗑️ ${docNames.length} document(s) supprimé(s) : ${docNames.join(", ")}`,
+          "bulk_delete",
+        )
+      })
+
+      const docIds = actionModal.documents.map((doc) => doc.id)
+      setDocuments((prev) => prev.filter((doc) => !docIds.includes(doc.id)))
+      showNotification("success", `${actionModal.documents.length} document(s) supprimé(s)`)
+      setSelectedDocuments([])
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmMove = () => {
+    if (actionModal.document) {
+      const oldFolderId = actionModal.document.folderId
+      const newFolder = folders.find((f) => f.name === newFolderName)
+      const newFolderId = newFolder?.id || oldFolderId
+
+      const updatedDoc = { ...actionModal.document, folder: newFolderName, folderId: newFolderId }
+      setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
+      showNotification("success", `${actionModal.document.name} déplacé vers ${newFolderName}`)
+
+      // Notifications dans les chats des deux dossiers
+      if (oldFolderId !== newFolderId) {
+        sendFolderChatNotification(
+          oldFolderId,
+          `📤 ${actionModal.document.name} a été déplacé vers ${newFolderName}`,
+          "move_out",
+          actionModal.document.name,
+        )
+        sendFolderChatNotification(
+          newFolderId,
+          `📥 ${actionModal.document.name} a été déplacé depuis ${actionModal.document.folder}`,
+          "move_in",
+          actionModal.document.name,
+        )
+      }
+    } else if (actionModal.documents.length > 0) {
+      const newFolder = folders.find((f) => f.name === newFolderName)
+      const newFolderId = newFolder?.id || ""
+
+      // Grouper par dossier d'origine
+      const folderGroups = actionModal.documents.reduce(
+        (acc, doc) => {
+          if (!acc[doc.folderId]) acc[doc.folderId] = []
+          acc[doc.folderId].push(doc.name)
+          return acc
+        },
+        {} as { [folderId: string]: string[] },
+      )
+
+      // Notifications dans les dossiers d'origine
+      Object.entries(folderGroups).forEach(([oldFolderId, docNames]) => {
+        if (oldFolderId !== newFolderId) {
+          sendFolderChatNotification(
+            oldFolderId,
+            `📤 ${docNames.length} document(s) déplacé(s) vers ${newFolderName} : ${docNames.join(", ")}`,
+            "bulk_move_out",
+          )
+        }
+      })
+
+      // Notification dans le dossier de destination
+      if (newFolderId) {
+        sendFolderChatNotification(
+          newFolderId,
+          `📥 ${actionModal.documents.length} document(s) déplacé(s) dans ce dossier : ${actionModal.documents.map((d) => d.name).join(", ")}`,
+          "bulk_move_in",
+        )
+      }
+
+      const docIds = actionModal.documents.map((doc) => doc.id)
+      setDocuments((prev) =>
+        prev.map((doc) => (docIds.includes(doc.id) ? { ...doc, folder: newFolderName, folderId: newFolderId } : doc)),
+      )
+      showNotification("success", `${actionModal.documents.length} document(s) déplacé(s) vers ${newFolderName}`)
+      setSelectedDocuments([])
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmRename = () => {
+    if (actionModal.document) {
+      const updatedDoc = { ...actionModal.document, name: newDocumentName }
+      setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
+      showNotification("success", `Document renommé en ${newDocumentName}`)
+
+      // Notification dans le chat du dossier
+      sendFolderChatNotification(
+        actionModal.document.folderId,
+        `✏️ Document renommé : "${actionModal.document.name}" → "${newDocumentName}"`,
+        "rename",
+        newDocumentName,
+      )
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmEdit = () => {
+    if (actionModal.document) {
+      const updatedDoc = {
+        ...actionModal.document,
+        description: editDescription,
+        modified: new Date(),
+      }
+      setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
+      showNotification("success", `${actionModal.document.name} mis à jour`)
+
+      // Notification dans le chat du dossier
+      let message = `✏️ ${actionModal.document.name} a été modifié`
+      if (editMessage.trim()) {
+        message += ` - ${editMessage}`
+      }
+      if (editAttachment) {
+        message += ` (avec pièce jointe: ${editAttachment.name})`
+      }
+
+      sendFolderChatNotification(actionModal.document.folderId, message, "edit", actionModal.document.name)
+
+      showNotification("info", "Message envoyé dans le chat du dossier")
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmRequest = () => {
+    showNotification("success", `Demande de document "${requestDocumentName}" envoyée`)
+
+    // Simuler l'envoi de la demande - on pourrait déterminer le dossier cible
+    console.log("Demande de document:", {
+      name: requestDocumentName,
+      message: requestMessage,
+      type: "request",
+    })
+
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmValidation = (isValid: boolean) => {
+    if (actionModal.document) {
+      const updatedDoc = {
+        ...actionModal.document,
+        isValidated: isValid,
+        status: isValid ? "validated" : "rejected",
+        hasCertificate: isValid,
+      }
+      setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
+      showNotification("success", `${actionModal.document.name} ${isValid ? "validé" : "invalidé"}`)
+
+      // Notification dans le chat du dossier
+      sendFolderChatNotification(
+        actionModal.document.folderId,
+        `${isValid ? "✅" : "❌"} ${actionModal.document.name} a été ${isValid ? "validé" : "invalidé"}`,
+        isValid ? "validate" : "invalidate",
+        actionModal.document.name,
+      )
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
+
+  const confirmArchive = () => {
+    if (actionModal.document) {
+      const updatedDoc = {
+        ...actionModal.document,
+        storageType: "permanent" as const,
+        status: "archived",
+        modified: new Date(),
+      }
+      setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
+      showNotification("success", `${actionModal.document.name} archivé vers le stockage permanent`)
+
+      // Notification dans le chat du dossier
+      let message = `📦 ${actionModal.document.name} a été archivé vers le stockage permanent (conservation: ${retentionPeriod} ans)`
+      if (archiveReason.trim()) {
+        message += ` - Raison: ${archiveReason}`
+      }
+
+      sendFolderChatNotification(actionModal.document.folderId, message, "archive", actionModal.document.name)
+    } else if (actionModal.documents.length > 0) {
+      // Grouper par dossier
+      const folderGroups = actionModal.documents.reduce(
+        (acc, doc) => {
+          if (!acc[doc.folderId]) acc[doc.folderId] = []
+          acc[doc.folderId].push(doc.name)
+          return acc
+        },
+        {} as { [folderId: string]: string[] },
+      )
+
+      // Notifications dans les chats des dossiers concernés
+      Object.entries(folderGroups).forEach(([folderId, docNames]) => {
+        let message = `📦 ${docNames.length} document(s) archivé(s) vers le stockage permanent (conservation: ${retentionPeriod} ans) : ${docNames.join(", ")}`
+        if (archiveReason.trim()) {
+          message += ` - Raison: ${archiveReason}`
+        }
+
+        sendFolderChatNotification(folderId, message, "bulk_archive")
+      })
+
+      const docIds = actionModal.documents.map((doc) => doc.id)
+      setDocuments((prev) =>
+        prev.map((doc) =>
+          docIds.includes(doc.id)
+            ? { ...doc, storageType: "permanent" as const, status: "archived", modified: new Date() }
+            : doc,
+        ),
+      )
+      showNotification("success", `${actionModal.documents.length} document(s) archivé(s) vers le stockage permanent`)
+      setSelectedDocuments([])
+    }
+    setActionModal({ type: null, document: null, documents: [] })
+  }
 
   const filteredDocuments = documents
     .filter((doc) => {
@@ -202,6 +1034,9 @@ export default function DocumentsPage() {
         return false
       }
       if (filterAuthor !== "all" && doc.author !== filterAuthor) {
+        return false
+      }
+      if (filterStorage !== "all" && doc.storageType !== filterStorage) {
         return false
       }
       return true
@@ -263,18 +1098,53 @@ export default function DocumentsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStorageIcon = (storageType: string) => {
+    return storageType === "permanent" ? (
+      <Cloud className="h-4 w-4 text-blue-600" title="Stockage permanent" />
+    ) : (
+      <HardDrive className="h-4 w-4 text-gray-600" title="Stockage temporaire" />
+    )
+  }
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "owner":
+        return <Crown className="h-4 w-4 text-yellow-600" />
+      case "editor":
+        return <Edit className="h-4 w-4 text-blue-600" />
+      case "validator":
+        return <ShieldCheck className="h-4 w-4 text-green-600" />
+      case "contributor":
+        return <UserPlus className="h-4 w-4 text-purple-600" />
+      case "viewer":
+        return <Eye className="h-4 w-4 text-gray-600" />
+      case "admin":
+        return <Shield className="h-4 w-4 text-red-600" />
+      case "manager":
+        return <Users className="h-4 w-4 text-orange-600" />
+      case "user":
+        return <User className="h-4 w-4 text-blue-600" />
+      case "guest":
+        return <User className="h-4 w-4 text-gray-400" />
+      default:
+        return <User className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  const getStatusBadge = (status: string, isValidated: boolean) => {
+    if (isValidated) {
+      return <Badge className="bg-green-100 text-green-800 border-green-200">Validé</Badge>
+    }
+
     switch (status) {
-      case "recent":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Nouveau</Badge>
-      case "modified":
-        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Modifié</Badge>
-      case "shared":
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Partagé</Badge>
-      case "important":
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Important</Badge>
+      case "pending":
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">En attente</Badge>
+      case "draft":
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Brouillon</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejeté</Badge>
       case "archived":
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Archivé</Badge>
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Archivé</Badge>
       default:
         return null
     }
@@ -309,6 +1179,27 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg flex items-center space-x-2 ${
+            notification.type === "success"
+              ? "bg-green-100 text-green-800 border border-green-200"
+              : notification.type === "error"
+                ? "bg-red-100 text-red-800 border border-red-200"
+                : "bg-blue-100 text-blue-800 border border-blue-200"
+          }`}
+        >
+          {notification.type === "success" && <CheckCircle className="h-5 w-5" />}
+          {notification.type === "error" && <XCircle className="h-5 w-5" />}
+          {notification.type === "info" && <Info className="h-5 w-5" />}
+          <span>{notification.message}</span>
+          <Button variant="ghost" size="sm" onClick={() => setNotification(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -316,6 +1207,10 @@ export default function DocumentsPage() {
           <p className="text-gray-600 mt-1">Gérez vos documents et fichiers</p>
         </div>
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
+          <Button variant="outline" size="sm" onClick={handleRequestDocument}>
+            <FileQuestion className="h-4 w-4 mr-2" />
+            Demander un document
+          </Button>
           <Button variant="outline" size="sm">
             <Upload className="h-4 w-4 mr-2" />
             Importer
@@ -328,7 +1223,7 @@ export default function DocumentsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -357,10 +1252,10 @@ export default function DocumentsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Partagés</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.shared}</p>
+                <p className="text-sm font-medium text-gray-600">Validés</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.validated}</p>
               </div>
-              <Share2 className="h-8 w-8 text-purple-600" />
+              <ShieldCheck className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
@@ -373,6 +1268,30 @@ export default function DocumentsPage() {
                 <p className="text-2xl font-bold text-gray-900">{stats.favorites}</p>
               </div>
               <Star className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Permanents</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.permanent}</p>
+              </div>
+              <Cloud className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Temporaires</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.temporary}</p>
+              </div>
+              <HardDrive className="h-8 w-8 text-gray-600" />
             </div>
           </CardContent>
         </Card>
@@ -445,7 +1364,7 @@ export default function DocumentsPage() {
           {/* Advanced Filters */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="filterType" className="text-sm font-medium">
                     Type de fichier
@@ -480,7 +1399,33 @@ export default function DocumentsPage() {
                       <SelectItem value="Sophie Laurent">Sophie Laurent</SelectItem>
                       <SelectItem value="Jean Martin">Jean Martin</SelectItem>
                       <SelectItem value="Pierre Durand">Pierre Durand</SelectItem>
-                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="Admin Système">Admin Système</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="filterStorage" className="text-sm font-medium">
+                    Type de stockage
+                  </Label>
+                  <Select value={filterStorage} onValueChange={setFilterStorage}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les stockages</SelectItem>
+                      <SelectItem value="temporary">
+                        <div className="flex items-center space-x-2">
+                          <HardDrive className="h-4 w-4" />
+                          <span>Temporaire</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="permanent">
+                        <div className="flex items-center space-x-2">
+                          <Cloud className="h-4 w-4" />
+                          <span>Permanent</span>
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -491,6 +1436,7 @@ export default function DocumentsPage() {
                     onClick={() => {
                       setFilterType("all")
                       setFilterAuthor("all")
+                      setFilterStorage("all")
                       setSearchTerm("")
                     }}
                   >
@@ -519,19 +1465,24 @@ export default function DocumentsPage() {
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleBulkDownload}>
                   <Download className="h-4 w-4 mr-2" />
-                  Télécharger
+                  Récupérer
                 </Button>
-                <Button variant="outline" size="sm">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Partager
+                <Button variant="outline" size="sm" onClick={handleBulkArchive}>
+                  <CloudUpload className="h-4 w-4 mr-2" />
+                  Archiver
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleBulkMove}>
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Déplacer
                 </Button>
-                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  className="text-red-600 hover:text-red-700 bg-transparent"
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer
                 </Button>
@@ -561,6 +1512,7 @@ export default function DocumentsPage() {
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Modifié</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Auteur</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Dossier</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Stockage</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Statut</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
                   </tr>
@@ -577,9 +1529,19 @@ export default function DocumentsPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-3">
                           {getFileIcon(doc.type)}
-                          <div>
+                          <div className="flex items-center space-x-2">
                             <span className="font-medium text-gray-900">{doc.name}</span>
-                            {doc.favorite && <Star className="inline h-4 w-4 ml-2 text-yellow-500 fill-current" />}
+                            <button onClick={() => handleToggleFavorite(doc.id)}>
+                              <Star
+                                className={`h-4 w-4 ${doc.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
+                              />
+                            </button>
+                            {doc.isValidated && <ShieldCheck className="h-4 w-4 text-green-600" />}
+                            {doc.hasCertificate && (
+                              <button onClick={() => handleViewCertificate(doc)}>
+                                <Certificate className="h-4 w-4 text-blue-600 hover:text-blue-700" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -588,24 +1550,97 @@ export default function DocumentsPage() {
                       <td className="py-3 px-4 text-gray-600">{formatDate(doc.modified)}</td>
                       <td className="py-3 px-4 text-gray-600">{doc.author}</td>
                       <td className="py-3 px-4 text-gray-600">{doc.folder}</td>
-                      <td className="py-3 px-4">{getStatusBadge(doc.status)}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-1">
+                          {getStorageIcon(doc.storageType)}
+                          <span className="text-sm text-gray-600 capitalize">
+                            {doc.storageType === "permanent" ? "Permanent" : "Temporaire"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">{getStatusBadge(doc.status, doc.isValidated)}</td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end space-x-1">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)}>
                             <Download className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          {doc.permissions.canInvite && (
+                            <Button variant="ghost" size="sm" onClick={() => handleInviteDocument(doc)}>
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {doc.permissions.canEdit && (
+                            <Button variant="ghost" size="sm" onClick={() => handleEditDocument(doc)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <div className="relative group">
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg py-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 min-w-[150px]">
+                              <button
+                                onClick={() => handleRenameDocument(doc)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Renommer
+                              </button>
+                              <button
+                                onClick={() => handleMoveDocument(doc)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                              >
+                                <Move className="h-4 w-4 mr-2" />
+                                Déplacer
+                              </button>
+                              {doc.permissions.canArchive && (
+                                <button
+                                  onClick={() => handleArchiveDocument(doc)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                                >
+                                  <CloudUpload className="h-4 w-4 mr-2" />
+                                  Archiver
+                                </button>
+                              )}
+                              {doc.permissions.canValidate && (
+                                <button
+                                  onClick={() => handleValidateDocument(doc)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                                >
+                                  {doc.isValidated ? (
+                                    <>
+                                      <ShieldX className="h-4 w-4 mr-2" />
+                                      Invalider
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ShieldCheck className="h-4 w-4 mr-2" />
+                                      Valider
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => navigator.clipboard.writeText(doc.name)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                              >
+                                <Copy className="h-4 w-4 mr-2" />
+                                Copier le nom
+                              </button>
+                              {doc.permissions.canDelete && (
+                                <button
+                                  onClick={() => handleDeleteDocument(doc)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-600 flex items-center"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -629,11 +1664,20 @@ export default function DocumentsPage() {
                         onCheckedChange={() => toggleDocumentSelection(doc.id)}
                       />
                     </div>
-                    {doc.favorite && (
-                      <div className="absolute top-2 right-2">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      </div>
-                    )}
+                    <div className="absolute top-2 right-2 flex items-center space-x-1">
+                      <button onClick={() => handleToggleFavorite(doc.id)}>
+                        <Star
+                          className={`h-4 w-4 ${doc.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
+                        />
+                      </button>
+                      {getStorageIcon(doc.storageType)}
+                      {doc.isValidated && <ShieldCheck className="h-4 w-4 text-green-600" />}
+                      {doc.hasCertificate && (
+                        <button onClick={() => handleViewCertificate(doc)}>
+                          <Certificate className="h-4 w-4 text-blue-600 hover:text-blue-700" />
+                        </button>
+                      )}
+                    </div>
 
                     <div className="flex flex-col items-center space-y-3 mt-6">
                       <div className="w-16 h-16 flex items-center justify-center bg-gray-100 rounded-lg">
@@ -646,25 +1690,87 @@ export default function DocumentsPage() {
                         </h3>
                         <p className="text-xs text-gray-500">{doc.size}</p>
                         <p className="text-xs text-gray-500">{formatDate(doc.modified)}</p>
+                        <p className="text-xs text-gray-500 flex items-center justify-center space-x-1">
+                          {getStorageIcon(doc.storageType)}
+                          <span>{doc.storageType === "permanent" ? "Permanent" : "Temporaire"}</span>
+                        </p>
                       </div>
 
-                      {getStatusBadge(doc.status) && (
-                        <div className="flex justify-center">{getStatusBadge(doc.status)}</div>
+                      {getStatusBadge(doc.status, doc.isValidated) && (
+                        <div className="flex justify-center">{getStatusBadge(doc.status, doc.isValidated)}</div>
                       )}
 
                       <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)}>
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
-                          <Share2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        {doc.permissions.canInvite && (
+                          <Button variant="ghost" size="sm" onClick={() => handleInviteDocument(doc)}>
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <div className="relative group/menu">
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                          <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg py-1 opacity-0 group-hover/menu:opacity-100 transition-opacity z-10 min-w-[120px]">
+                            {doc.permissions.canEdit && (
+                              <button
+                                onClick={() => handleEditDocument(doc)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Éditer
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleMoveDocument(doc)}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                            >
+                              <Move className="h-4 w-4 mr-2" />
+                              Déplacer
+                            </button>
+                            {doc.permissions.canArchive && (
+                              <button
+                                onClick={() => handleArchiveDocument(doc)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                              >
+                                <CloudUpload className="h-4 w-4 mr-2" />
+                                Archiver
+                              </button>
+                            )}
+                            {doc.permissions.canValidate && (
+                              <button
+                                onClick={() => handleValidateDocument(doc)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
+                              >
+                                {doc.isValidated ? (
+                                  <>
+                                    <ShieldX className="h-4 w-4 mr-2" />
+                                    Invalider
+                                  </>
+                                ) : (
+                                  <>
+                                    <ShieldCheck className="h-4 w-4 mr-2" />
+                                    Valider
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            {doc.permissions.canDelete && (
+                              <button
+                                onClick={() => handleDeleteDocument(doc)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-600 flex items-center"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -678,7 +1784,7 @@ export default function DocumentsPage() {
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun document trouvé</h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm || filterType !== "all" || filterAuthor !== "all"
+                {searchTerm || filterType !== "all" || filterAuthor !== "all" || filterStorage !== "all"
                   ? "Essayez de modifier vos critères de recherche"
                   : "Commencez par importer votre premier document"}
               </p>
@@ -690,6 +1796,903 @@ export default function DocumentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      {actionModal.type && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            {/* View Modal - Document Summary */}
+            {actionModal.type === "view" && actionModal.document && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Résumé du document</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-3">
+                    {getFileIcon(actionModal.document.type)}
+                    <div>
+                      <h4 className="font-medium text-lg">{actionModal.document.name}</h4>
+                      <p className="text-sm text-gray-500">{actionModal.document.version}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {getStorageIcon(actionModal.document.storageType)}
+                      {actionModal.document.isValidated && <ShieldCheck className="h-5 w-5 text-green-600" />}
+                      {actionModal.document.hasCertificate && <Certificate className="h-5 w-5 text-blue-600" />}
+                    </div>
+                  </div>
+
+                  {/* Document Summary */}
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h5 className="font-medium text-blue-900 mb-2">Résumé automatique</h5>
+                    <p className="text-blue-800 text-sm leading-relaxed">{actionModal.document.summary}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-medium text-gray-700">Taille</p>
+                      <p className="text-gray-600">{actionModal.document.size}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Type</p>
+                      <p className="text-gray-600">{actionModal.document.type}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Auteur</p>
+                      <p className="text-gray-600">{actionModal.document.author}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Dossier</p>
+                      <p className="text-gray-600">{actionModal.document.folder}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Stockage</p>
+                      <div className="flex items-center space-x-1">
+                        {getStorageIcon(actionModal.document.storageType)}
+                        <span className="text-gray-600 capitalize">
+                          {actionModal.document.storageType === "permanent" ? "Permanent" : "Temporaire"}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Créé</p>
+                      <p className="text-gray-600">{actionModal.document.created.toLocaleDateString("fr-FR")}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Modifié</p>
+                      <p className="text-gray-600">{formatDate(actionModal.document.modified)}</p>
+                    </div>
+                  </div>
+
+                  {actionModal.document.description && (
+                    <div>
+                      <p className="font-medium text-gray-700 mb-1">Description</p>
+                      <p className="text-gray-600 text-sm">{actionModal.document.description}</p>
+                    </div>
+                  )}
+
+                  {actionModal.document.tags.length > 0 && (
+                    <div>
+                      <p className="font-medium text-gray-700 mb-2">Tags</p>
+                      <div className="flex flex-wrap gap-1">
+                        {actionModal.document.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => handleDownloadDocument(actionModal.document!)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Récupérer
+                    </Button>
+                    {actionModal.document.hasCertificate && (
+                      <Button variant="outline" onClick={() => handleViewCertificate(actionModal.document!)}>
+                        <Certificate className="h-4 w-4 mr-2" />
+                        Certificat
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Edit Modal */}
+            {actionModal.type === "edit" && actionModal.document && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Modifier le document</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Ajouter une description..."
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="attachment">Pièce jointe (optionnel)</Label>
+                    <Input
+                      id="attachment"
+                      type="file"
+                      onChange={(e) => setEditAttachment(e.target.files?.[0] || null)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="message">Message pour le chat du dossier</Label>
+                    <Textarea
+                      id="message"
+                      value={editMessage}
+                      onChange={(e) => setEditMessage(e.target.value)}
+                      placeholder="Expliquer les modifications apportées..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button onClick={confirmEdit}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Enregistrer et notifier
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Invite Modal */}
+            {actionModal.type === "invite" && actionModal.document && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Inviter sur le document</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>{actionModal.document.name}</strong> sera accessible uniquement à la personne invitée dans
+                      ses dossiers.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Type d'invitation</Label>
+                    <div className="flex space-x-4 mt-2">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="inviteScope"
+                          value="user"
+                          checked={inviteScope === "user"}
+                          onChange={(e) => setInviteScope(e.target.value as "user" | "role")}
+                          className="mr-2"
+                        />
+                        Utilisateur spécifique
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="inviteScope"
+                          value="role"
+                          checked={inviteScope === "role"}
+                          onChange={(e) => setInviteScope(e.target.value as "user" | "role")}
+                          className="mr-2"
+                        />
+                        Rôle/Groupe
+                      </label>
+                    </div>
+                  </div>
+
+                  {inviteScope === "user" ? (
+                    <div>
+                      <Label htmlFor="selectedUser">Sélectionner un utilisateur</Label>
+                      <Select value={selectedUser} onValueChange={setSelectedUser}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choisir un utilisateur" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {(() => {
+                            const organizedUsers = organizeUsersForInvitation(actionModal.document!.folderId)
+
+                            return (
+                              <>
+                                {/* Rôles sur le dossier */}
+                                {Object.keys(organizedUsers.folderRoles).length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
+                                      👑 Rôles sur ce dossier
+                                    </div>
+                                    {Object.entries(organizedUsers.folderRoles).map(([role, roleUsers]) => (
+                                      <div key={`folder-${role}`}>
+                                        <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 flex items-center">
+                                          {getRoleIcon(role)}
+                                          <span className="ml-1 capitalize">{role}</span>
+                                        </div>
+                                        {roleUsers.map((user) => (
+                                          <SelectItem key={`folder-${role}-${user.id}`} value={user.id}>
+                                            <div className="flex items-center space-x-2">
+                                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs">
+                                                {user.avatar}
+                                              </div>
+                                              <div>
+                                                <span className="font-medium">{user.name}</span>
+                                                <span className="text-gray-500 ml-2 text-xs">
+                                                  ({user.folderRoles[actionModal.document!.folderId]?.role})
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </div>
+                                    ))}
+                                  </>
+                                )}
+
+                                {/* Rôles dans l'espace principal */}
+                                <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
+                                  🏢 Rôles dans l'espace principal
+                                </div>
+                                {Object.entries(organizedUsers.spaceRoles).map(([role, roleUsers]) => (
+                                  <div key={`space-${role}`}>
+                                    <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 flex items-center">
+                                      {getRoleIcon(role)}
+                                      <span className="ml-1 capitalize">{role}</span>
+                                    </div>
+                                    {roleUsers.map((user) => (
+                                      <SelectItem key={`space-${role}-${user.id}`} value={user.id}>
+                                        <div className="flex items-center space-x-2">
+                                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs">
+                                            {user.avatar}
+                                          </div>
+                                          <div>
+                                            <span className="font-medium">{user.name}</span>
+                                            <span className="text-gray-500 ml-2 text-xs">({user.spaceRole})</span>
+                                          </div>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </div>
+                                ))}
+
+                                {/* Autres espaces */}
+                                {Object.keys(organizedUsers.otherSpaces).length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
+                                      🌐 Autres espaces
+                                    </div>
+                                    {Object.entries(organizedUsers.otherSpaces).map(([spaceName, spaceUsers]) => (
+                                      <div key={`other-${spaceName}`}>
+                                        <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50">
+                                          {spaceName}
+                                        </div>
+                                        {spaceUsers.map((user) => (
+                                          <SelectItem key={`other-${spaceName}-${user.id}`} value={user.id}>
+                                            <div className="flex items-center space-x-2">
+                                              <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs">
+                                                {user.avatar}
+                                              </div>
+                                              <div>
+                                                <span className="font-medium">{user.name}</span>
+                                                <span className="text-gray-500 ml-2 text-xs">
+                                                  (
+                                                  {
+                                                    user.spaceRoles[
+                                                      Object.keys(user.spaceRoles).find(
+                                                        (key) => user.spaceRoles[key].spaceName === spaceName,
+                                                      ) || ""
+                                                    ]?.role
+                                                  }
+                                                  )
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </div>
+                                    ))}
+                                  </>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label htmlFor="selectedRole">Sélectionner un rôle</Label>
+                      <Select value={selectedRole} onValueChange={setSelectedRole}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choisir un rôle" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* Rôles sur dossier */}
+                          <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
+                            📁 Rôles sur dossier
+                          </div>
+                          {roles
+                            .filter((role) => role.level === "folder")
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex items-center space-x-2">
+                                  {getRoleIcon(role.id.replace("folder-", ""))}
+                                  <div>
+                                    <span className="font-medium">{role.name}</span>
+                                    <p className="text-xs text-gray-500">{role.description}</p>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+
+                          {/* Rôles dans l'espace */}
+                          <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
+                            🏢 Rôles dans l'espace
+                          </div>
+                          {roles
+                            .filter((role) => role.level === "space")
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex items-center space-x-2">
+                                  {getRoleIcon(role.id.replace("space-", ""))}
+                                  <div>
+                                    <span className="font-medium">{role.name}</span>
+                                    <p className="text-xs text-gray-500">{role.description}</p>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+
+                          {/* Rôles globaux */}
+                          <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
+                            🌐 Rôles globaux
+                          </div>
+                          {roles
+                            .filter((role) => role.level === "global")
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex items-center space-x-2">
+                                  {getRoleIcon(role.id.replace("global-", ""))}
+                                  <div>
+                                    <span className="font-medium">{role.name}</span>
+                                    <p className="text-xs text-gray-500">{role.description}</p>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="inviteMessage">Message d'invitation</Label>
+                    <Textarea
+                      id="inviteMessage"
+                      value={inviteMessage}
+                      onChange={(e) => setInviteMessage(e.target.value)}
+                      placeholder="Ajouter un message pour expliquer pourquoi vous partagez ce document..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button onClick={confirmInvite} disabled={inviteScope === "user" ? !selectedUser : !selectedRole}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Inviter
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Archive Modal */}
+            {actionModal.type === "archive" && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Archiver vers le stockage permanent</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <CloudUpload className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-blue-900">Archivage vers le stockage permanent</span>
+                    </div>
+                    <p className="text-sm text-blue-800">
+                      {actionModal.document
+                        ? `Le document "${actionModal.document.name}" sera transféré du store chiffré local temporaire vers le store chiffré d'archivage permanent.`
+                        : `${actionModal.documents.length} document(s) seront transférés vers le stockage permanent.`}
+                    </p>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Database className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-blue-900">Architecture de stockage souveraine</span>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-white p-3 rounded-lg border border-green-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Zap className="h-4 w-4 text-green-600" />
+                          <h5 className="font-semibold text-green-800 text-sm">Stockage Temporaire</h5>
+                        </div>
+                        <p className="text-xs text-gray-700 mb-2">
+                          <strong>Store chiffré local, distribué strictement en parties prenantes</strong>
+                        </p>
+                        <ul className="text-xs text-gray-600 space-y-1">
+                          <li>• Accès rapide pour modifications</li>
+                          <li>• Chiffrement bout en bout</li>
+                          <li>• Distribution contrôlée</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-blue-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Server className="h-4 w-4 text-blue-600" />
+                          <h5 className="font-semibold text-blue-800 text-sm">Stockage Permanent</h5>
+                        </div>
+                        <p className="text-xs text-gray-700 mb-2">
+                          <strong>
+                            Store chiffré d'archivage local, distribué strictement en parties prenantes et sur un
+                            serveur de backup sans accès aux données compatible avec du cold storage
+                          </strong>
+                        </p>
+                        <ul className="text-xs text-gray-600 space-y-1">
+                          <li>• Conservation longue durée</li>
+                          <li>• Lecture seule sécurisée</li>
+                          <li>• Backup cold storage</li>
+                          <li>• Extraction IA pour data room distribuée</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 p-2 bg-blue-100 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Snowflake className="h-4 w-4 text-blue-600" />
+                        <p className="text-xs text-blue-800">
+                          <strong>🔐 Souveraineté totale :</strong> Vos données restent sous votre contrôle exclusif,
+                          même en backup cold storage
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {actionModal.document && (
+                    <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                      {getFileIcon(actionModal.document.type)}
+                      <div className="flex-1">
+                        <h4 className="font-medium">{actionModal.document.name}</h4>
+                        <p className="text-sm text-gray-500">
+                          {actionModal.document.size} • {actionModal.document.type}
+                        </p>
+                        <div className="flex items-center space-x-1 mt-1">
+                          <Zap className="h-3 w-3 text-green-500" />
+                          <span className="text-xs text-gray-500">Store chiffré local temporaire</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl">→</div>
+                        <div className="flex items-center space-x-1 mt-1">
+                          <Server className="h-3 w-3 text-blue-500" />
+                          <span className="text-xs text-blue-600">Store permanent</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {actionModal.documents.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Documents à archiver :</p>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {actionModal.documents.map((doc) => (
+                          <div key={doc.id} className="flex items-center space-x-2 p-2 bg-gray-50 rounded text-sm">
+                            {getFileIcon(doc.type)}
+                            <span className="flex-1 truncate">{doc.name}</span>
+                            <div className="flex items-center space-x-1">
+                              <Zap className="h-3 w-3 text-green-500" />
+                              <span className="text-xs">→</span>
+                              <Server className="h-3 w-3 text-blue-500" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label htmlFor="retentionPeriod">Période de conservation</Label>
+                    <Select value={retentionPeriod} onValueChange={setRetentionPeriod}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 an</SelectItem>
+                        <SelectItem value="3">3 ans</SelectItem>
+                        <SelectItem value="5">5 ans (recommandé)</SelectItem>
+                        <SelectItem value="7">7 ans</SelectItem>
+                        <SelectItem value="10">10 ans</SelectItem>
+                        <SelectItem value="permanent">Conservation permanente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      <Calendar className="h-3 w-3 inline mr-1" />
+                      Durée de conservation dans le stockage permanent
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="archiveReason">Raison de l'archivage (optionnel)</Label>
+                    <Textarea
+                      id="archiveReason"
+                      value={archiveReason}
+                      onChange={(e) => setArchiveReason(e.target.value)}
+                      placeholder="Expliquer pourquoi ce document doit être archivé..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button onClick={confirmArchive}>
+                      <CloudUpload className="h-4 w-4 mr-2" />
+                      Archiver ({retentionPeriod === "permanent" ? "permanent" : `${retentionPeriod} ans`})
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Delete Modal */}
+            {actionModal.type === "delete" && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-red-600">Confirmer la suppression</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800">
+                        {actionModal.document
+                          ? `Êtes-vous sûr de vouloir supprimer "${actionModal.document.name}" ?`
+                          : `Êtes-vous sûr de vouloir supprimer ${actionModal.documents.length} document(s) ?`}
+                      </p>
+                      <p className="text-xs text-red-600">Cette action est irréversible.</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button variant="destructive" onClick={confirmDelete}>
+                      Supprimer
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Move Modal */}
+            {actionModal.type === "move" && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">
+                    Déplacer{" "}
+                    {actionModal.document ? actionModal.document.name : `${actionModal.documents.length} document(s)`}
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="newFolder">Dossier de destination</Label>
+                    <Select value={newFolderName} onValueChange={setNewFolderName}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un dossier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {folders.map((folder) => (
+                          <SelectItem key={folder.id} value={folder.name}>
+                            {folder.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button onClick={confirmMove} disabled={!newFolderName}>
+                      Déplacer
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Rename Modal */}
+            {actionModal.type === "rename" && actionModal.document && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Renommer le document</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="newName">Nouveau nom</Label>
+                    <Input
+                      id="newName"
+                      value={newDocumentName}
+                      onChange={(e) => setNewDocumentName(e.target.value)}
+                      placeholder="Nom du document"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={confirmRename}
+                      disabled={!newDocumentName || newDocumentName === actionModal.document.name}
+                    >
+                      Renommer
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Request Document Modal */}
+            {actionModal.type === "request" && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Demander un document</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-yellow-50 p-3 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      Ce document n'existe pas encore dans le dossier. Votre demande sera envoyée aux collaborateurs
+                      concernés.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="requestDocumentName">Nom du document demandé</Label>
+                    <Input
+                      id="requestDocumentName"
+                      value={requestDocumentName}
+                      onChange={(e) => setRequestDocumentName(e.target.value)}
+                      placeholder="Ex: Contrat de maintenance 2024"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="requestMessage">Message de demande</Label>
+                    <Textarea
+                      id="requestMessage"
+                      value={requestMessage}
+                      onChange={(e) => setRequestMessage(e.target.value)}
+                      placeholder="Expliquer pourquoi vous avez besoin de ce document..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    <Button onClick={confirmRequest} disabled={!requestDocumentName.trim()}>
+                      <FileQuestion className="h-4 w-4 mr-2" />
+                      Envoyer la demande
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Validate Modal */}
+            {actionModal.type === "validate" && actionModal.document && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Validation du document</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    {getFileIcon(actionModal.document.type)}
+                    <div>
+                      <h4 className="font-medium">{actionModal.document.name}</h4>
+                      <p className="text-sm text-gray-500">Version {actionModal.document.version}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      Statut actuel: <strong>{actionModal.document.isValidated ? "Validé" : "Non validé"}</strong>
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                    >
+                      Annuler
+                    </Button>
+                    {actionModal.document.isValidated ? (
+                      <Button variant="destructive" onClick={() => confirmValidation(false)}>
+                        <ShieldX className="h-4 w-4 mr-2" />
+                        Invalider
+                      </Button>
+                    ) : (
+                      <Button onClick={() => confirmValidation(true)}>
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        Valider
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Certificate Modal */}
+            {actionModal.type === "certificate" && actionModal.document && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Certificat de validation</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, document: null, documents: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="border-2 border-green-200 bg-green-50 p-6 rounded-lg">
+                    <div className="flex items-center justify-center mb-4">
+                      <Certificate className="h-12 w-12 text-green-600" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h4 className="font-bold text-green-900">Certificat de Validation</h4>
+                      <p className="text-green-800 font-medium">{actionModal.document.name}</p>
+                      <p className="text-sm text-green-700">Version {actionModal.document.version}</p>
+                    </div>
+
+                    <div className="mt-6 space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Document validé le:</span>
+                        <span className="font-medium text-green-900">
+                          {actionModal.document.modified.toLocaleDateString("fr-FR")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Validé par:</span>
+                        <span className="font-medium text-green-900">{actionModal.document.author}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Type de stockage:</span>
+                        <div className="flex items-center space-x-1">
+                          {getStorageIcon(actionModal.document.storageType)}
+                          <span className="font-medium text-green-900">
+                            {actionModal.document.storageType === "permanent" ? "Permanent" : "Temporaire"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Hash de sécurité:</span>
+                        <span className="font-mono text-xs text-green-900">SHA256:a1b2c3d4...</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => showNotification("info", "Certificat téléchargé")}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger le certificat
+                    </Button>
+                    <Button onClick={() => setActionModal({ type: null, document: null, documents: [] })}>
+                      Fermer
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
