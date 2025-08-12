@@ -5,7 +5,7 @@ import { UserStore } from "./UserStore"
 
 /**
  * MessageBus - Passerelle de communication avec l'iframe 4NK
- * Gère l'authentification, les process et la corrélation des messages
+ * Suit le protocole 4NK exact selon les handlers de l'iframe
  */
 export class MessageBus {
   private static instance: MessageBus | null = null
@@ -41,7 +41,7 @@ export class MessageBus {
 
   private sendMessage(type: string, data: any = {}, timeoutMs = 30000): Promise<any> {
     return new Promise((resolve, reject) => {
-      const correlationId = uuidv4()
+      const messageId = uuidv4()
       const iframe = IframeReference.getIframe()
 
       if (!iframe || !iframe.contentWindow) {
@@ -49,34 +49,37 @@ export class MessageBus {
         return
       }
 
-      const accessToken = this.userStore.getAccessToken()
       const targetOrigin = this.getOriginFromUrl(this.origin)
 
-      const message = {
+      // Construire le message selon le protocole 4NK
+      const message: any = {
         type,
-        correlationId,
-        accessToken,
+        messageId,
         timestamp: Date.now(),
         ...data,
       }
 
-      console.log(`📤 Sending message ${type} to origin:`, targetOrigin)
-      console.log(`📤 Message data:`, { type, correlationId, hasAccessToken: !!accessToken })
+      // Ajouter l'accessToken pour tous les messages sauf REQUEST_LINK
+      if (type !== "REQUEST_LINK") {
+        const accessToken = this.userStore.getAccessToken()
+        if (accessToken) {
+          message.accessToken = accessToken
+        }
+      }
 
-      const cleanup = this.initMessageListener(correlationId, resolve, reject, timeoutMs)
+      console.log(`📤 Sending message ${type} to origin:`, targetOrigin)
+      console.log(`📤 Message data:`, {
+        type,
+        messageId,
+        hasAccessToken: !!message.accessToken,
+      })
+
+      const cleanup = this.initMessageListener(messageId, resolve, reject, timeoutMs)
 
       // Essayer d'envoyer le message avec plusieurs stratégies
       const sendStrategies = [
         () => iframe.contentWindow!.postMessage(message, targetOrigin),
         () => iframe.contentWindow!.postMessage(message, "*"),
-        () => {
-          // Attendre un peu et réessayer
-          setTimeout(() => {
-            if (iframe.contentWindow) {
-              iframe.contentWindow.postMessage(message, targetOrigin)
-            }
-          }, 1000)
-        },
       ]
 
       let strategyIndex = 0
@@ -101,12 +104,7 @@ export class MessageBus {
     })
   }
 
-  private initMessageListener(
-    correlationId: string,
-    resolve: Function,
-    reject: Function,
-    timeoutMs: number,
-  ): () => void {
+  private initMessageListener(messageId: string, resolve: Function, reject: Function, timeoutMs: number): () => void {
     const timeout = setTimeout(() => {
       cleanup()
       reject(new Error(`Timeout: Aucune réponse après ${timeoutMs / 1000} secondes`))
@@ -118,8 +116,8 @@ export class MessageBus {
         event.origin,
         "Type:",
         event.data.type,
-        "CorrelationId:",
-        event.data.correlationId,
+        "MessageId:",
+        event.data.messageId,
       )
 
       // Accepter les messages de domaines 4NK ou localhost
@@ -134,16 +132,17 @@ export class MessageBus {
         return
       }
 
-      if (event.data.correlationId !== correlationId) {
-        console.log("🚫 Message ignored - correlation ID mismatch")
+      if (event.data.messageId !== messageId) {
+        console.log("🚫 Message ignored - messageId mismatch")
         return
       }
 
       cleanup()
 
-      if (event.data.type?.startsWith("ERROR_")) {
-        console.error("❌ Received error:", event.data.message)
-        reject(new Error(event.data.message || "Unknown error"))
+      // Gérer les erreurs selon le protocole 4NK
+      if (event.data.type === "ERROR") {
+        console.error("❌ Received error:", event.data.error)
+        reject(new Error(event.data.error || "Unknown error"))
       } else {
         console.log("✅ Message processed successfully:", event.data.type)
         resolve(event.data)
@@ -159,10 +158,9 @@ export class MessageBus {
     return cleanup
   }
 
-  // Méthodes d'authentification avec timeouts plus longs
+  // Méthodes d'authentification selon le protocole 4NK exact
   async isReady(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const correlationId = uuidv4()
       const iframe = IframeReference.getIframe()
 
       if (!iframe || !iframe.contentWindow) {
@@ -171,16 +169,12 @@ export class MessageBus {
       }
 
       const targetOrigin = this.getOriginFromUrl(this.origin)
-      console.log("🔍 Checking if iframe is ready, target origin:", targetOrigin)
+      console.log("🔍 Waiting for LISTENING message from iframe...")
 
       // Timeout de 45 secondes pour isReady
       const timeout = setTimeout(() => {
         cleanup()
-        reject(
-          new Error(
-            "Timeout: L'iframe 4NK ne répond pas après 45 secondes. Vérifiez votre connexion internet et l'URL de l'iframe.",
-          ),
-        )
+        reject(new Error("Timeout: L'iframe 4NK n'a pas envoyé le message LISTENING après 45 secondes."))
       }, 45000)
 
       const cleanup = () => {
@@ -203,85 +197,57 @@ export class MessageBus {
           return
         }
 
-        if (event.data.correlationId !== correlationId) {
-          console.log("🚫 Ready check ignored - correlation ID mismatch")
-          return
-        }
-
-        cleanup()
-
-        if (event.data.type === "READY") {
-          console.log("✅ Iframe is ready!")
+        if (event.data.type === "LISTENING") {
+          console.log("✅ Iframe is ready and listening!")
+          cleanup()
           resolve()
-        } else if (event.data.type?.startsWith("ERROR_")) {
-          console.error("❌ Iframe ready check failed:", event.data.message)
-          reject(new Error(event.data.message || "Unknown error"))
         }
       }
 
       window.addEventListener("message", handleMessage)
 
-      // Envoyer le message de vérification avec plusieurs tentatives
-      const sendReadyCheck = (attempt = 1) => {
-        if (attempt > 5) {
-          cleanup()
-          reject(new Error("Impossible de communiquer avec l'iframe après 5 tentatives"))
-          return
-        }
-
-        console.log(`🔄 Sending ready check, attempt ${attempt}/5`)
-
-        try {
-          iframe.contentWindow!.postMessage(
-            {
-              type: "IS_READY",
-              correlationId,
-              timestamp: Date.now(),
-              attempt,
-            },
-            targetOrigin,
-          )
-        } catch (error) {
-          console.log(`🔄 Attempt ${attempt} failed, trying wildcard...`)
-          try {
-            iframe.contentWindow!.postMessage(
-              {
-                type: "IS_READY",
-                correlationId,
-                timestamp: Date.now(),
-                attempt,
-              },
-              "*",
-            )
-          } catch (fallbackError) {
-            console.error(`❌ Both attempts ${attempt} failed:`, error, fallbackError)
-          }
-        }
-
-        // Réessayer après un délai croissant
-        setTimeout(() => sendReadyCheck(attempt + 1), attempt * 2000)
-      }
-
-      sendReadyCheck()
+      // L'iframe envoie automatiquement LISTENING quand elle est prête
+      // Pas besoin d'envoyer IS_READY
     })
   }
 
+  /**
+   * Demande d'authentification selon le protocole 4NK
+   * Envoie REQUEST_LINK -> reçoit LINK_ACCEPTED avec accessToken et refreshToken
+   */
   async requestLink(): Promise<void> {
     console.log("🔐 Requesting authentication link...")
-    const response = await this.sendMessage("REQUEST_LINK", {}, 60000) // 60 secondes pour l'auth
+
+    const response = await this.sendMessage("REQUEST_LINK", {}, 60000)
+
+    console.log("📥 Received response:", response)
 
     if (response.type === "LINK_ACCEPTED") {
       console.log("✅ Authentication link accepted")
+
+      // Vérifier que nous avons bien reçu les tokens
+      if (!response.accessToken || !response.refreshToken) {
+        throw new Error("Tokens manquants dans la réponse LINK_ACCEPTED")
+      }
+
+      // Stocker les tokens en sessionStorage selon le protocole
       this.userStore.connect(response.accessToken, response.refreshToken)
+
+      console.log("💾 Tokens stored in sessionStorage")
     } else {
       console.error("❌ Authentication failed:", response)
-      throw new Error("Authentication failed")
+      throw new Error(`Authentication failed: expected LINK_ACCEPTED, got ${response.type}`)
     }
   }
 
   async getUserPairingId(): Promise<string> {
     console.log("🆔 Getting user pairing ID...")
     const response = await this.sendMessage("GET_PAIRING_ID", {}, 30000)
+
+    if (response.type !== "GET_PAIRING_ID") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
     const pairingId = response.userPairingId
     this.userStore.pair(pairingId)
     console.log("✅ User pairing ID retrieved:", pairingId?.slice(0, 8) + "...")
@@ -290,8 +256,16 @@ export class MessageBus {
 
   async validateToken(): Promise<boolean> {
     try {
-      const response = await this.sendMessage("VALIDATE_TOKEN", {}, 15000)
-      return response.valid === true
+      const response = await this.sendMessage(
+        "VALIDATE_TOKEN",
+        {
+          accessToken: this.userStore.getAccessToken(),
+          refreshToken: this.userStore.getRefreshToken(),
+        },
+        15000,
+      )
+
+      return response.isValid === true
     } catch {
       return false
     }
@@ -306,49 +280,78 @@ export class MessageBus {
       30000,
     )
 
-    if (response.type === "TOKEN_RENEWED") {
+    if (response.type === "RENEW_TOKEN") {
       this.userStore.connect(response.accessToken, response.refreshToken)
+    } else {
+      throw new Error("Failed to renew token")
     }
   }
 
-  // Méthodes de gestion des process
+  // Méthodes de gestion des process (toutes nécessitent l'accessToken)
   async getProcesses(): Promise<any> {
-    return this.sendMessage("GET_PROCESSES", {}, 20000)
+    const response = await this.sendMessage("GET_PROCESSES", {}, 20000)
+
+    if (response.type !== "PROCESSES_RETRIEVED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.processes
   }
 
   async getMyProcesses(): Promise<string[]> {
     const response = await this.sendMessage("GET_MY_PROCESSES", {}, 20000)
-    return response.processIds || []
+
+    if (response.type !== "GET_MY_PROCESSES") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.myProcesses || []
   }
 
   async getData(processId: string, stateId: string): Promise<Record<string, any>> {
-    return this.sendMessage("RETRIEVE_DATA", { processId, stateId }, 20000)
+    const response = await this.sendMessage("RETRIEVE_DATA", { processId, stateId }, 20000)
+
+    if (response.type !== "DATA_RETRIEVED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.data
   }
 
   async createProfile(profileData: any, privateFields: string[], roles: any): Promise<any> {
-    return this.sendMessage(
+    const response = await this.sendMessage(
       "CREATE_PROCESS",
       {
-        processType: "profile",
-        data: profileData,
+        processData: profileData,
         privateFields,
         roles,
       },
       30000,
     )
+
+    if (response.type !== "PROCESS_CREATED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.processCreated
   }
 
   async createFolder(folderData: any, privateFields: string[], roles: any): Promise<any> {
-    return this.sendMessage(
+    const response = await this.sendMessage(
       "CREATE_PROCESS",
       {
-        processType: "folder",
-        data: folderData,
+        processData: folderData,
         privateFields,
         roles,
       },
       30000,
     )
+
+    if (response.type !== "PROCESS_CREATED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.processCreated
   }
 
   async updateProcess(
@@ -358,24 +361,80 @@ export class MessageBus {
     privateFields: string[],
     roles: any,
   ): Promise<any> {
-    return this.sendMessage(
+    const response = await this.sendMessage(
       "UPDATE_PROCESS",
       {
         processId,
-        lastStateId,
-        data: newData,
+        newData,
         privateFields,
         roles,
       },
       30000,
     )
+
+    if (response.type !== "PROCESS_UPDATED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.updatedProcess
   }
 
   async notifyProcessUpdate(processId: string, stateId: string): Promise<void> {
-    return this.sendMessage("NOTIFY_UPDATE", { processId, stateId }, 15000)
+    const response = await this.sendMessage("NOTIFY_UPDATE", { processId, stateId }, 15000)
+
+    if (response.type !== "UPDATE_NOTIFIED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
   }
 
   async validateState(processId: string, stateId: string): Promise<any> {
-    return this.sendMessage("VALIDATE_STATE", { processId, stateId }, 20000)
+    const response = await this.sendMessage("VALIDATE_STATE", { processId, stateId }, 20000)
+
+    if (response.type !== "STATE_VALIDATED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.validatedProcess
+  }
+
+  // Méthodes utilitaires supplémentaires
+  async decodePublicData(encodedData: number[]): Promise<any> {
+    const response = await this.sendMessage("DECODE_PUBLIC_DATA", { encodedData }, 15000)
+
+    if (response.type !== "PUBLIC_DATA_DECODED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.decodedData
+  }
+
+  async hashValue(commitedIn: string, label: string, fileBlob: any): Promise<string> {
+    const response = await this.sendMessage("HASH_VALUE", { commitedIn, label, fileBlob }, 15000)
+
+    if (response.type !== "VALUE_HASHED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.hash
+  }
+
+  async getMerkleProof(processState: any, attributeName: string): Promise<any> {
+    const response = await this.sendMessage("GET_MERKLE_PROOF", { processState, attributeName }, 15000)
+
+    if (response.type !== "MERKLE_PROOF_RETRIEVED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.proof
+  }
+
+  async validateMerkleProof(merkleProof: string, documentHash: string): Promise<boolean> {
+    const response = await this.sendMessage("VALIDATE_MERKLE_PROOF", { merkleProof, documentHash }, 15000)
+
+    if (response.type !== "MERKLE_PROOF_VALIDATED") {
+      throw new Error(`Unexpected response type: ${response.type}`)
+    }
+
+    return response.isValid
   }
 }

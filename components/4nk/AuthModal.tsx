@@ -50,7 +50,7 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
       setError(null)
       setLoadingStep("Initialisation...")
 
-      console.log("🔗 Initialisation authentification avec:", iframeUrl)
+      console.log("🔗 Initialisation authentification 4NK avec:", iframeUrl)
       console.log("🔄 Tentative:", retryCount + 1, "/", maxRetries + 1)
 
       // Étape 1: Attendre que l'iframe soit disponible dans le DOM
@@ -78,24 +78,24 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
 
       setShowIframe(true)
 
-      // Étape 3: Vérifier que l'iframe répond
-      setLoadingStep("Vérification de la communication...")
+      // Étape 3: Attendre le message LISTENING de l'iframe
+      setLoadingStep("Attente du signal LISTENING...")
       const messageBus = MessageBus.getInstance(iframeUrl)
 
-      console.log("⏳ Vérification de la disponibilité de l'iframe...")
+      console.log("⏳ Attente du message LISTENING de l'iframe...")
       await messageBus.isReady()
-      console.log("✅ Iframe prête")
+      console.log("✅ Iframe prête et en écoute")
 
       setIsIframeReady(true)
 
-      // Étape 4: Demander l'authentification
-      setLoadingStep("Authentification en cours...")
-      console.log("🔐 Demande d'authentification...")
+      // Étape 4: Demander l'authentification (REQUEST_LINK)
+      setLoadingStep("Demande d'authentification...")
+      console.log("🔐 Envoi REQUEST_LINK...")
       await messageBus.requestLink()
-      console.log("✅ Authentification acceptée")
+      console.log("✅ LINK_ACCEPTED reçu, tokens stockés")
 
       // Étape 5: Récupérer l'ID d'appairage
-      setLoadingStep("Finalisation...")
+      setLoadingStep("Récupération de l'identité...")
       console.log("🆔 Récupération de l'ID d'appairage...")
       await messageBus.getUserPairingId()
       console.log("✅ ID d'appairage récupéré")
@@ -110,7 +110,21 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
       console.error("❌ Authentication error:", err)
       const errorMessage = err instanceof Error ? err.message : "Erreur d'authentification"
 
-      setError(errorMessage)
+      // Messages d'erreur plus spécifiques selon le protocole 4NK
+      if (errorMessage.includes("LINK_ACCEPTED")) {
+        setError("Erreur d'authentification : réponse inattendue du serveur 4NK")
+      } else if (errorMessage.includes("Tokens manquants")) {
+        setError("Erreur : les tokens d'authentification n'ont pas été reçus")
+      } else if (errorMessage.includes("LISTENING")) {
+        setError("L'iframe 4NK n'est pas en écoute. Vérifiez l'URL de l'iframe.")
+      } else if (errorMessage.includes("Timeout")) {
+        setError("Timeout : L'iframe 4NK ne répond pas. Vérifiez votre connexion.")
+      } else if (errorMessage.includes("origin")) {
+        setError("Erreur de configuration : les domaines ne correspondent pas")
+      } else {
+        setError(errorMessage)
+      }
+
       setIsIframeReady(false)
       setShowIframe(false)
     } finally {
@@ -241,7 +255,7 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
             <div className="text-center py-8">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
               <p className="text-gray-600 font-medium">{loadingStep}</p>
-              {loadingStep && <p className="text-gray-500 text-sm mt-2">Cela peut prendre quelques instants...</p>}
+              {loadingStep && <p className="text-gray-500 text-sm mt-2">Protocole 4NK en cours...</p>}
 
               {/* Barre de progression visuelle */}
               <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
@@ -250,16 +264,16 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
                   style={{
                     width:
                       loadingStep === "Initialisation..."
-                        ? "20%"
+                        ? "15%"
                         : loadingStep === "Chargement de l'iframe..."
-                          ? "40%"
+                          ? "30%"
                           : loadingStep === "Attente du chargement complet..."
-                            ? "60%"
-                            : loadingStep === "Vérification de la communication..."
-                              ? "80%"
-                              : loadingStep === "Authentification en cours..."
-                                ? "90%"
-                                : loadingStep === "Finalisation..."
+                            ? "45%"
+                            : loadingStep === "Attente du signal LISTENING..."
+                              ? "60%"
+                              : loadingStep === "Demande d'authentification..."
+                                ? "80%"
+                                : loadingStep === "Récupération de l'identité..."
                                   ? "95%"
                                   : "0%",
                   }}
@@ -272,7 +286,7 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
             <div className="text-center py-8">
               <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
               <p className="text-green-700 font-semibold">Authentification réussie !</p>
-              <p className="text-gray-600 text-sm mt-2">Redirection en cours...</p>
+              <p className="text-gray-600 text-sm mt-2">Tokens stockés • Redirection en cours...</p>
             </div>
           )}
 
@@ -280,6 +294,7 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
             <div className="border rounded-lg overflow-hidden">
               <div className="bg-blue-50 p-2 text-center">
                 <p className="text-blue-700 text-sm">Interface d'authentification 4NK</p>
+                <p className="text-blue-600 text-xs">En attente de LISTENING → REQUEST_LINK → LINK_ACCEPTED</p>
               </div>
               <Iframe iframeUrl={iframeUrl} showIframe={true} />
             </div>
@@ -296,6 +311,9 @@ export const AuthModal = memo(function AuthModal({ isOpen, onConnect, onClose, i
               </p>
               <p>
                 <strong>Iframe chargée:</strong> {iframeLoaded ? "Oui" : "Non"}
+              </p>
+              <p>
+                <strong>Protocole:</strong> LISTENING → REQUEST_LINK → LINK_ACCEPTED
               </p>
             </div>
           )}
