@@ -2,22 +2,26 @@ import { v4 as uuidv4 } from "uuid"
 import { IframeReference } from "./IframeReference"
 import { EventBus } from "./EventBus"
 import { UserStore } from "./UserStore"
+import { MockService } from "./MockService"
 
 /**
  * MessageBus - Passerelle de communication avec l'iframe 4NK
- * Suit le protocole 4NK exact selon les handlers de l'iframe
+ * Supporte le mode mock avec l'identifiant d'entreprise "1234"
  */
 export class MessageBus {
   private static instance: MessageBus | null = null
   private origin: string
   private eventBus: EventBus
   private userStore: UserStore
+  private mockService: MockService
   private errors: Map<string, any> = new Map()
+  private isMockMode = false
 
   private constructor(origin: string) {
     this.origin = origin
     this.eventBus = EventBus.getInstance()
     this.userStore = UserStore.getInstance()
+    this.mockService = MockService.getInstance()
 
     console.log("🔧 MessageBus initialized with origin:", origin)
   }
@@ -27,6 +31,23 @@ export class MessageBus {
       MessageBus.instance = new MessageBus(origin)
     }
     return MessageBus.instance
+  }
+
+  // Activer le mode mock
+  enableMockMode(): void {
+    this.isMockMode = true
+    console.log("🎭 Mock mode enabled")
+  }
+
+  // Désactiver le mode mock
+  disableMockMode(): void {
+    this.isMockMode = false
+    this.mockService.disconnect()
+    console.log("🎭 Mock mode disabled")
+  }
+
+  isInMockMode(): boolean {
+    return this.isMockMode
   }
 
   private getOriginFromUrl(url: string): string {
@@ -40,6 +61,11 @@ export class MessageBus {
   }
 
   private sendMessage(type: string, data: any = {}, timeoutMs = 30000): Promise<any> {
+    // Si en mode mock, utiliser le service mock
+    if (this.isMockMode) {
+      return this.handleMockMessage(type, data)
+    }
+
     return new Promise((resolve, reject) => {
       const messageId = uuidv4()
       const iframe = IframeReference.getIframe()
@@ -104,6 +130,86 @@ export class MessageBus {
     })
   }
 
+  private async handleMockMessage(type: string, data: any): Promise<any> {
+    console.log(`🎭 Handling mock message: ${type}`)
+
+    switch (type) {
+      case "REQUEST_LINK":
+        const tokens = await this.mockService.mockRequestLink()
+        return {
+          type: "LINK_ACCEPTED",
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        }
+
+      case "GET_PAIRING_ID":
+        const pairingId = await this.mockService.mockGetUserPairingId()
+        return {
+          type: "GET_PAIRING_ID",
+          userPairingId: pairingId,
+        }
+
+      case "GET_PROCESSES":
+        const processes = await this.mockService.mockGetProcesses()
+        return {
+          type: "PROCESSES_RETRIEVED",
+          processes,
+        }
+
+      case "GET_MY_PROCESSES":
+        const myProcesses = await this.mockService.mockGetMyProcesses()
+        return {
+          type: "GET_MY_PROCESSES",
+          myProcesses,
+        }
+
+      case "RETRIEVE_DATA":
+        const processData = await this.mockService.mockGetData(data.processId, data.stateId)
+        return {
+          type: "DATA_RETRIEVED",
+          data: processData,
+        }
+
+      case "CREATE_PROCESS":
+        const created = await this.mockService.mockCreateProcess(data.processData, data.privateFields, data.roles)
+        return {
+          type: "PROCESS_CREATED",
+          processCreated: created,
+        }
+
+      case "NOTIFY_UPDATE":
+        await this.mockService.mockNotifyProcessUpdate(data.processId, data.stateId)
+        return {
+          type: "UPDATE_NOTIFIED",
+        }
+
+      case "VALIDATE_STATE":
+        const validated = await this.mockService.mockValidateState(data.processId, data.stateId)
+        return {
+          type: "STATE_VALIDATED",
+          validatedProcess: validated,
+        }
+
+      case "VALIDATE_TOKEN":
+        const isValid = await this.mockService.mockValidateToken()
+        return {
+          type: "VALIDATE_TOKEN",
+          isValid,
+        }
+
+      case "RENEW_TOKEN":
+        const newTokens = await this.mockService.mockRenewToken()
+        return {
+          type: "RENEW_TOKEN",
+          accessToken: newTokens.accessToken,
+          refreshToken: newTokens.refreshToken,
+        }
+
+      default:
+        throw new Error(`Mock message type not implemented: ${type}`)
+    }
+  }
+
   private initMessageListener(messageId: string, resolve: Function, reject: Function, timeoutMs: number): () => void {
     const timeout = setTimeout(() => {
       cleanup()
@@ -158,8 +264,13 @@ export class MessageBus {
     return cleanup
   }
 
-  // Méthodes d'authentification selon le protocole 4NK exact
+  // Méthodes d'authentification
   async isReady(): Promise<void> {
+    if (this.isMockMode) {
+      console.log("🎭 Mock mode - iframe ready")
+      return Promise.resolve()
+    }
+
     return new Promise((resolve, reject) => {
       const iframe = IframeReference.getIframe()
 
@@ -205,16 +316,9 @@ export class MessageBus {
       }
 
       window.addEventListener("message", handleMessage)
-
-      // L'iframe envoie automatiquement LISTENING quand elle est prête
-      // Pas besoin d'envoyer IS_READY
     })
   }
 
-  /**
-   * Demande d'authentification selon le protocole 4NK
-   * Envoie REQUEST_LINK -> reçoit LINK_ACCEPTED avec accessToken et refreshToken
-   */
   async requestLink(): Promise<void> {
     console.log("🔐 Requesting authentication link...")
 
@@ -287,7 +391,7 @@ export class MessageBus {
     }
   }
 
-  // Méthodes de gestion des process (toutes nécessitent l'accessToken)
+  // Méthodes de gestion des process
   async getProcesses(): Promise<any> {
     const response = await this.sendMessage("GET_PROCESSES", {}, 20000)
 
@@ -436,5 +540,20 @@ export class MessageBus {
     }
 
     return response.isValid
+  }
+
+  // Méthodes spécifiques au mock
+  getMockStats() {
+    if (this.isMockMode) {
+      return this.mockService.getMockStats()
+    }
+    return null
+  }
+
+  getMockRecentActivity() {
+    if (this.isMockMode) {
+      return this.mockService.getMockRecentActivity()
+    }
+    return null
   }
 }

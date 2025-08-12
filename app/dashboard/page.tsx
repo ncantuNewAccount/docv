@@ -1,229 +1,490 @@
 "use client"
+import { X } from "lucide-react" // Import the X icon
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, Folder, Users, Activity, TrendingUp, Shield, Clock, CheckCircle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import {
+  FileText,
+  Folder,
+  Users,
+  Activity,
+  TrendingUp,
+  Clock,
+  Shield,
+  AlertCircle,
+  CheckCircle,
+  Download,
+  Upload,
+  Search,
+  Plus,
+  MoreHorizontal,
+  Edit,
+  Share2,
+  TestTube,
+} from "lucide-react"
 import { MessageBus } from "@/lib/4nk/MessageBus"
+import Link from "next/link"
 
 export default function DashboardPage() {
-  const [processes, setProcesses] = useState<any[]>([])
-  const [myProcesses, setMyProcesses] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isMockMode, setIsMockMode] = useState(false)
+  const [stats, setStats] = useState({
+    totalDocuments: 0,
+    totalFolders: 0,
+    totalUsers: 0,
+    storageUsed: 0,
+    storageLimit: 100,
+    recentActivity: 0,
+  })
 
-  const iframeUrl = process.env.NEXT_PUBLIC_4NK_IFRAME_URL || "https://dev.4nk.io"
+  const [recentDocuments, setRecentDocuments] = useState<any[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<any[]>([])
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        const messageBus = MessageBus.getInstance(iframeUrl)
+    const iframeUrl = process.env.NEXT_PUBLIC_4NK_IFRAME_URL || "https://dev.4nk.io"
+    const messageBus = MessageBus.getInstance(iframeUrl)
+    const mockMode = messageBus.isInMockMode()
+    setIsMockMode(mockMode)
 
-        const [allProcesses, userProcesses] = await Promise.all([
-          messageBus.getProcesses(),
-          messageBus.getMyProcesses(),
-        ])
+    // Simuler le chargement des données
+    if (mockMode) {
+      setStats({
+        totalDocuments: 1247,
+        totalFolders: 89,
+        totalUsers: 12,
+        storageUsed: 67.3,
+        storageLimit: 100,
+        recentActivity: 24,
+      })
 
-        setProcesses(allProcesses || [])
-        setMyProcesses(userProcesses || [])
-      } catch (error) {
-        console.error("Error loading dashboard data:", error)
-      } finally {
-        setIsLoading(false)
-      }
+      setRecentDocuments([
+        {
+          id: "doc_001",
+          name: "Contrat_Client_ABC_2024.pdf",
+          type: "PDF",
+          size: "2.4 MB",
+          modifiedAt: "Il y a 2 heures",
+          modifiedBy: "Marie Dubois",
+          status: "Signé",
+          folder: "Contrats 2024",
+        },
+        {
+          id: "doc_002",
+          name: "Rapport_Financier_Q1.xlsx",
+          type: "Excel",
+          size: "1.8 MB",
+          modifiedAt: "Il y a 4 heures",
+          modifiedBy: "Jean Martin",
+          status: "En révision",
+          folder: "Finance",
+        },
+        {
+          id: "doc_003",
+          name: "Présentation_Produit_V2.pptx",
+          type: "PowerPoint",
+          size: "15.2 MB",
+          modifiedAt: "Hier",
+          modifiedBy: "Sophie Laurent",
+          status: "Finalisé",
+          folder: "Marketing",
+        },
+        {
+          id: "doc_004",
+          name: "Cahier_des_charges_Projet_X.docx",
+          type: "Word",
+          size: "892 KB",
+          modifiedAt: "Il y a 2 jours",
+          modifiedBy: "Pierre Durand",
+          status: "Brouillon",
+          folder: "Projets",
+        },
+        {
+          id: "doc_005",
+          name: "Facture_2024_001.pdf",
+          type: "PDF",
+          size: "156 KB",
+          modifiedAt: "Il y a 3 jours",
+          modifiedBy: "Marie Dubois",
+          status: "Payée",
+          folder: "Comptabilité",
+        },
+      ])
+
+      setRecentActivity([
+        {
+          id: "act_001",
+          type: "upload",
+          user: "Marie Dubois",
+          action: "a téléchargé",
+          target: "Contrat_Client_ABC_2024.pdf",
+          time: "Il y a 2 heures",
+          icon: Upload,
+          color: "text-green-600",
+        },
+        {
+          id: "act_002",
+          type: "edit",
+          user: "Jean Martin",
+          action: "a modifié",
+          target: "Rapport_Financier_Q1.xlsx",
+          time: "Il y a 4 heures",
+          icon: Edit,
+          color: "text-blue-600",
+        },
+        {
+          id: "act_003",
+          type: "share",
+          user: "Sophie Laurent",
+          action: "a partagé",
+          target: "Présentation_Produit_V2.pptx",
+          time: "Hier",
+          icon: Share2,
+          color: "text-purple-600",
+        },
+        {
+          id: "act_004",
+          type: "create",
+          user: "Pierre Durand",
+          action: "a créé le dossier",
+          target: "Projets 2024",
+          time: "Il y a 2 jours",
+          icon: Folder,
+          color: "text-orange-600",
+        },
+        {
+          id: "act_005",
+          type: "download",
+          user: "Marie Dubois",
+          action: "a téléchargé",
+          target: "Facture_2024_001.pdf",
+          time: "Il y a 3 jours",
+          icon: Download,
+          color: "text-indigo-600",
+        },
+      ])
+
+      setNotifications([
+        {
+          id: "notif_001",
+          type: "success",
+          title: "Document signé",
+          message: "Le contrat ABC a été signé par toutes les parties",
+          time: "Il y a 1 heure",
+          icon: CheckCircle,
+          color: "text-green-600",
+          bgColor: "bg-green-50",
+        },
+        {
+          id: "notif_002",
+          type: "warning",
+          title: "Révision requise",
+          message: "Le rapport financier Q1 nécessite votre validation",
+          time: "Il y a 3 heures",
+          icon: AlertCircle,
+          color: "text-orange-600",
+          bgColor: "bg-orange-50",
+        },
+        {
+          id: "notif_003",
+          type: "info",
+          title: "Nouveau collaborateur",
+          message: "Thomas Petit a rejoint l'équipe Marketing",
+          time: "Hier",
+          icon: Users,
+          color: "text-blue-600",
+          bgColor: "bg-blue-50",
+        },
+      ])
     }
+  }, [])
 
-    loadDashboardData()
-  }, [iframeUrl])
+  const getFileIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "pdf":
+        return "📄"
+      case "excel":
+        return "📊"
+      case "powerpoint":
+        return "📈"
+      case "word":
+        return "📝"
+      default:
+        return "📄"
+    }
+  }
 
-  const stats = [
-    {
-      title: "Documents",
-      value: processes.filter((p) => p.type === "document").length,
-      icon: FileText,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
-      title: "Dossiers",
-      value: processes.filter((p) => p.type === "folder").length,
-      icon: Folder,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Mes Process",
-      value: myProcesses.length,
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-    },
-    {
-      title: "Activité",
-      value: processes.length,
-      icon: Activity,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-  ]
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "signé":
+      case "finalisé":
+      case "payée":
+        return "bg-green-100 text-green-800"
+      case "en révision":
+        return "bg-orange-100 text-orange-800"
+      case "brouillon":
+        return "bg-gray-100 text-gray-800"
+      default:
+        return "bg-blue-100 text-blue-800"
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="text-gray-600 mt-1">Vue d'ensemble de votre espace DocV sécurisé</p>
+          <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
+          <p className="text-gray-600">Vue d'ensemble de votre espace documentaire sécurisé</p>
         </div>
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-          <Shield className="h-4 w-4 mr-1" />
-          Sécurisé 4NK
-        </Badge>
+        {isMockMode && (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <TestTube className="h-4 w-4 mr-2" />
+            Données de démonstration
+          </Badge>
+        )}
       </div>
 
-      {/* Stats Cards */}
+      {/* Statistiques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-blue-600" />
-              Activité récente
-            </CardTitle>
-            <CardDescription>Dernières actions sur vos process</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Documents</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {processes.slice(0, 5).map((process, index) => (
-              <div key={index} className="flex items-center justify-between py-3 border-b last:border-b-0">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-50 rounded-full">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Process {process.id?.slice(0, 8)}...</p>
-                    <p className="text-sm text-gray-600">Type: {process.type || "unknown"}</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  Actif
-                </Badge>
-              </div>
-            ))}
-
-            {processes.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Aucune activité récente</p>
-              </div>
-            )}
+            <div className="text-2xl font-bold">{stats.totalDocuments.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 inline mr-1" />
+              +12% ce mois
+            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-              Sécurité & Conformité
-            </CardTitle>
-            <CardDescription>État de votre infrastructure sécurisée</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Dossiers</CardTitle>
+            <Folder className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm">Chiffrement bout en bout</span>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Actif</Badge>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalFolders}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 inline mr-1" />
+              +3 cette semaine
+            </p>
+          </CardContent>
+        </Card>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm">Ancrage blockchain</span>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Actif</Badge>
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Collaborateurs</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 inline mr-1" />
+              +1 ce mois
+            </p>
+          </CardContent>
+        </Card>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm">Authentification 4NK</span>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Connecté</Badge>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stockage</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.storageUsed}%</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${stats.storageUsed}%` }}></div>
             </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm">Conformité RGPD</span>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Conforme</Badge>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.storageUsed} GB / {stats.storageLimit} GB utilisés
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* Actions rapides */}
       <Card>
         <CardHeader>
-          <CardTitle>Actions rapides</CardTitle>
+          <CardTitle className="flex items-center">
+            <Plus className="h-5 w-5 mr-2" />
+            Actions rapides
+          </CardTitle>
           <CardDescription>Accédez rapidement aux fonctionnalités principales</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="h-20 flex-col space-y-2">
-              <FileText className="h-6 w-6" />
-              <span>Nouveau document</span>
-            </Button>
+            <Link href="/dashboard/documents">
+              <Button
+                variant="outline"
+                className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+              >
+                <Upload className="h-6 w-6" />
+                <span>Télécharger un document</span>
+              </Button>
+            </Link>
+            <Link href="/dashboard/folders">
+              <Button
+                variant="outline"
+                className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+              >
+                <Folder className="h-6 w-6" />
+                <span>Créer un dossier</span>
+              </Button>
+            </Link>
+            <Link href="/dashboard/search">
+              <Button
+                variant="outline"
+                className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
+              >
+                <Search className="h-6 w-6" />
+                <span>Rechercher</span>
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
-            <Button variant="outline" className="h-20 flex-col space-y-2 bg-transparent">
-              <Folder className="h-6 w-6" />
-              <span>Créer un dossier</span>
-            </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Documents récents */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <FileText className="h-5 w-5 mr-2" />
+                Documents récents
+              </span>
+              <Link href="/dashboard/documents">
+                <Button variant="ghost" size="sm">
+                  Voir tout
+                </Button>
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentDocuments.map((doc) => (
+                <div key={doc.id} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50">
+                  <div className="text-2xl">{getFileIcon(doc.type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <span>{doc.folder}</span>
+                      <span>•</span>
+                      <span>{doc.size}</span>
+                      <span>•</span>
+                      <span>{doc.modifiedAt}</span>
+                    </div>
+                  </div>
+                  <Badge className={getStatusColor(doc.status)}>{doc.status}</Badge>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-            <Button variant="outline" className="h-20 flex-col space-y-2 bg-transparent">
-              <Users className="h-6 w-6" />
-              <span>Inviter un collaborateur</span>
-            </Button>
+        {/* Activité récente */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Activity className="h-5 w-5 mr-2" />
+              Activité récente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className={`p-2 rounded-full bg-gray-100 ${activity.color}`}>
+                    <activity.icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">{activity.user}</span> {activity.action}{" "}
+                      <span className="font-medium">{activity.target}</span>
+                    </p>
+                    <p className="text-xs text-gray-500 flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {activity.time}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            Notifications importantes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {notifications.map((notif) => (
+              <div key={notif.id} className={`p-4 rounded-lg ${notif.bgColor} border`}>
+                <div className="flex items-start space-x-3">
+                  <notif.icon className={`h-5 w-5 ${notif.color} mt-0.5`} />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-gray-900">{notif.title}</h4>
+                    <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
+                    <p className="text-xs text-gray-500 mt-2 flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {notif.time}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sécurité */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Shield className="h-5 w-5 mr-2 text-green-600" />
+            Statut de sécurité
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+            <div>
+              <h4 className="font-medium text-green-900">Sécurité optimale</h4>
+              <p className="text-sm text-green-700">
+                Tous vos documents sont chiffrés et sécurisés par la technologie 4NK
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="text-center p-3">
+              <Shield className="h-6 w-6 mx-auto text-green-600 mb-2" />
+              <p className="text-sm font-medium">Chiffrement bout en bout</p>
+            </div>
+            <div className="text-center p-3">
+              <CheckCircle className="h-6 w-6 mx-auto text-green-600 mb-2" />
+              <p className="text-sm font-medium">Authentification 4NK</p>
+            </div>
+            <div className="text-center p-3">
+              <Activity className="h-6 w-6 mx-auto text-green-600 mb-2" />
+              <p className="text-sm font-medium">Audit complet</p>
+            </div>
           </div>
         </CardContent>
       </Card>
