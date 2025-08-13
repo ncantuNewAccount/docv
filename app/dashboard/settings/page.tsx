@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,10 +9,37 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { User, Shield, Bell, Palette, Globe, Database, Key, Download, Upload, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Eye, EyeOff, Copy, ExternalLink, HardDrive, Activity, Lock, Smartphone, Plus } from 'lucide-react'
+import {
+  User,
+  Shield,
+  Bell,
+  Palette,
+  Globe,
+  Database,
+  Key,
+  Download,
+  Upload,
+  Trash2,
+  Save,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Copy,
+  ExternalLink,
+  HardDrive,
+  Activity,
+  Lock,
+  Smartphone,
+  Plus,
+  X,
+} from "lucide-react"
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile")
+  const [showAddDeviceModal, setShowAddDeviceModal] = useState(false)
+  const [showExportConfirmation, setShowExportConfirmation] = useState(false)
   const [settings, setSettings] = useState({
     profile: {
       firstName: "Utilisateur",
@@ -27,7 +54,7 @@ export default function SettingsPage() {
       twoFactorEnabled: true,
       sessionTimeout: "30",
       passwordLastChanged: new Date("2024-01-01"),
-      activeDevices: 3,
+      activeDevices: 1, // Simuler un seul device
     },
     notifications: {
       emailNotifications: true,
@@ -60,6 +87,24 @@ export default function SettingsPage() {
 
   const [showApiKey, setShowApiKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
+  const [showPairingWords, setShowPairingWords] = useState(false)
+
+  // Vérifier si un seul device est connecté au chargement
+  useEffect(() => {
+    if (settings.security.activeDevices === 1) {
+      // Attendre un peu avant d'afficher la modal pour laisser le temps à la page de se charger
+      const timer = setTimeout(() => {
+        setShowAddDeviceModal(true)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [settings.security.activeDevices])
+
+  const showNotification = (type: "success" | "error" | "info", message: string) => {
+    setNotification({ type, message })
+    setTimeout(() => setNotification(null), 3000)
+  }
 
   const tabs = [
     { id: "profile", name: "Profil", icon: User },
@@ -76,10 +121,68 @@ export default function SettingsPage() {
     // Simuler la sauvegarde
     await new Promise((resolve) => setTimeout(resolve, 1000))
     setIsSaving(false)
+    showNotification("success", "Paramètres sauvegardés avec succès")
+  }
+
+  const handleExportData = () => {
+    setShowExportConfirmation(true)
+  }
+
+  const confirmExportData = async () => {
+    setShowExportConfirmation(false)
+    showNotification("info", "Export des données en cours...")
+
+    // Simuler l'export de toutes les données IndexedDB
+    setTimeout(() => {
+      // Créer un objet simulant les données exportées
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        userData: settings,
+        documents: "Données des documents chiffrées",
+        folders: "Données des dossiers chiffrées",
+        privateKey: "PRIVATE_KEY_ENCRYPTED_DATA",
+        certificates: "Certificats blockchain",
+        chatHistory: "Historique des conversations",
+        preferences: "Préférences utilisateur",
+        warning: "⚠️ Ce fichier contient votre clé privée. Gardez-le en sécurité !",
+      }
+
+      // Simuler le téléchargement
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `docv-export-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      showNotification("success", "Export terminé. Fichier téléchargé avec succès.")
+    }, 3000)
   }
 
   const generateApiKey = () => {
     return "docv_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+  }
+
+  const generatePairingWords = () => {
+    const words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel"]
+    return Array.from({ length: 4 }, () => words[Math.floor(Math.random() * words.length)])
+  }
+
+  const [pairingWords] = useState(generatePairingWords())
+
+  const handleAddDevice = () => {
+    setShowAddDeviceModal(false)
+    setSettings((prev) => ({
+      ...prev,
+      security: {
+        ...prev.security,
+        activeDevices: prev.security.activeDevices + 1,
+      },
+    }))
+    showNotification("success", "Instructions d'appairage générées. Suivez les étapes sur votre autre appareil.")
   }
 
   const renderProfileTab = () => (
@@ -221,17 +324,12 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium">Authentification à deux facteurs</h4>
-              <p className="text-sm text-gray-500">Sécurisez votre compte avec 4NK</p>
+              <p className="text-sm text-gray-500">Sécurisez votre compte avec 4NK (obligatoire)</p>
             </div>
-            <Switch
-              checked={settings.security.twoFactorEnabled}
-              onCheckedChange={(checked) =>
-                setSettings({
-                  ...settings,
-                  security: { ...settings.security, twoFactorEnabled: checked },
-                })
-              }
-            />
+            <div className="flex items-center space-x-2">
+              <Switch checked={true} disabled={true} className="opacity-50" />
+              <Badge className="bg-red-100 text-red-800 border-red-200">Obligatoire</Badge>
+            </div>
           </div>
 
           <div>
@@ -284,18 +382,40 @@ export default function SettingsPage() {
               </div>
               <Badge className="bg-green-100 text-green-800">Actuel</Badge>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <Smartphone className="h-5 w-5 text-gray-600" />
-                <div>
-                  <p className="font-medium">iPhone</p>
-                  <p className="text-sm text-gray-500">Safari • Il y a 2 heures</p>
+
+            {settings.security.activeDevices > 1 && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Smartphone className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <p className="font-medium">iPhone</p>
+                    <p className="text-sm text-gray-500">Safari • Il y a 2 heures</p>
+                  </div>
                 </div>
+                <Badge variant="outline">Connecté</Badge>
               </div>
-              <Button variant="outline" size="sm">
-                Déconnecter
-              </Button>
-            </div>
+            )}
+
+            {settings.security.activeDevices === 1 && (
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium text-orange-900">Un seul appareil connecté</span>
+                </div>
+                <p className="text-sm text-orange-800 mb-3">
+                  Pour votre sécurité, nous recommandons d'ajouter un second appareil de confiance.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddDeviceModal(true)}
+                  className="bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un appareil
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -708,7 +828,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex space-x-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportData}>
               <Download className="h-4 w-4 mr-2" />
               Exporter les données
             </Button>
@@ -825,6 +945,27 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg flex items-center space-x-2 ${
+            notification.type === "success"
+              ? "bg-green-100 text-green-800 border border-green-200"
+              : notification.type === "error"
+                ? "bg-red-100 text-red-800 border border-red-200"
+                : "bg-blue-100 text-blue-800 border border-blue-200"
+          }`}
+        >
+          {notification.type === "success" && <CheckCircle className="h-5 w-5" />}
+          {notification.type === "error" && <X className="h-5 w-5" />}
+          {notification.type === "info" && <AlertTriangle className="h-5 w-5" />}
+          <span>{notification.message}</span>
+          <Button variant="ghost" size="sm" onClick={() => setNotification(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -865,6 +1006,131 @@ export default function SettingsPage() {
         {/* Main Content */}
         <div className="flex-1">{renderTabContent()}</div>
       </div>
+
+      {/* Modal d'ajout d'appareil */}
+      {showAddDeviceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <Shield className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ajouter un appareil de confiance</h3>
+              <p className="text-gray-600 mb-6">
+                Pour renforcer la sécurité de votre compte, ajoutez un second appareil de confiance.
+              </p>
+
+              <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-blue-900">Mots de pairing temporaires</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPairingWords(!showPairingWords)}
+                    className="text-blue-700 border-blue-300"
+                  >
+                    {showPairingWords ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                    {showPairingWords ? "Masquer" : "Afficher"}
+                  </Button>
+                </div>
+                <div
+                  className="grid grid-cols-2 gap-2 mb-3 select-none"
+                  style={{ userSelect: "none", WebkitUserSelect: "none" }}
+                >
+                  {pairingWords.map((word, index) => (
+                    <div
+                      key={index}
+                      className="bg-white p-2 rounded border font-mono text-center select-none"
+                      style={{ userSelect: "none", WebkitUserSelect: "none" }}
+                      onContextMenu={(e) => e.preventDefault()}
+                      onDragStart={(e) => e.preventDefault()}
+                    >
+                      {showPairingWords ? word : "••••"}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-700">Ces mots expirent dans 10 minutes</p>
+              </div>
+
+              <div className="text-left bg-gray-50 p-4 rounded-lg mb-6">
+                <h4 className="font-medium text-gray-900 mb-2">Instructions :</h4>
+                <ol className="text-sm text-gray-700 space-y-1">
+                  <li>1. Allez sur DocV avec votre autre appareil</li>
+                  <li>2. Cliquez sur "Pairing" sur la page de connexion</li>
+                  <li>3. Saisissez les 4 mots ci-dessus</li>
+                  <li>4. Votre appareil apparaîtra automatiquement</li>
+                </ol>
+              </div>
+
+              <div className="space-y-3">
+                <Button onClick={handleAddDevice} className="w-full">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  J'ai suivi les instructions
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddDeviceModal(false)} className="w-full">
+                  Plus tard
+                </Button>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">
+                Vous pouvez toujours ajouter un appareil plus tard depuis les paramètres de sécurité
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation d'export */}
+      {showExportConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirmer l'export des données</h3>
+              <p className="text-gray-600 mb-4">
+                Cette action va exporter toutes vos données stockées localement, y compris votre clé privée.
+              </p>
+
+              <div className="bg-red-50 p-4 rounded-lg mb-6 border border-red-200">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-left">
+                    <h4 className="font-medium text-red-900 mb-1">⚠️ Attention - Clé privée incluse</h4>
+                    <p className="text-sm text-red-700">
+                      Le fichier exporté contiendra votre clé privée chiffrée. Gardez ce fichier en sécurité et ne le
+                      partagez jamais.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-left bg-blue-50 p-4 rounded-lg mb-6">
+                <h4 className="font-medium text-blue-900 mb-2">Contenu de l'export :</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Paramètres utilisateur</li>
+                  <li>• Documents et métadonnées</li>
+                  <li>• Historique des dossiers</li>
+                  <li>• Certificats blockchain</li>
+                  <li>• Clé privée chiffrée 🔐</li>
+                  <li>• Historique des conversations</li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <Button onClick={confirmExportData} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Confirmer l'export
+                </Button>
+                <Button variant="outline" onClick={() => setShowExportConfirmation(false)} className="w-full">
+                  Annuler
+                </Button>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">
+                L'export peut prendre quelques minutes selon la quantité de données
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

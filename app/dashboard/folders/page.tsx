@@ -46,6 +46,7 @@ import {
   Timer,
   ShieldCheck,
   Archive,
+  FileCheck,
 } from "lucide-react"
 
 interface FolderData {
@@ -91,6 +92,12 @@ interface FolderData {
     dataUsage: string
     thirdPartyAccess: string
   }
+  documents?: Array<{
+    id: string
+    name: string
+    hasCertificate: boolean
+    certificateId?: string
+  }>
 }
 
 interface ActionModal {
@@ -103,6 +110,7 @@ interface ActionModal {
     | "request_document"
     | "storage_config"
     | "certificate"
+    | "documents_certificates"
     | null
   folder: FolderData | null
   folders: FolderData[]
@@ -352,6 +360,12 @@ export default function FoldersPage() {
             dataUsage: "Contrats clients et négociations commerciales",
             thirdPartyAccess: "Avocats externes, clients contractants",
           },
+          documents: [
+            { id: "doc1", name: "Contrat_ABC.pdf", hasCertificate: true, certificateId: "CERT-DOC-001" },
+            { id: "doc2", name: "Contrat_XYZ.pdf", hasCertificate: true, certificateId: "CERT-DOC-002" },
+            { id: "doc3", name: "Annexe_A.pdf", hasCertificate: false },
+            { id: "doc4", name: "Conditions_Generales.pdf", hasCertificate: true, certificateId: "CERT-DOC-003" },
+          ],
         },
         {
           id: 2,
@@ -393,6 +407,10 @@ export default function FoldersPage() {
             dataUsage: "Analyses de performance et rapports internes",
             thirdPartyAccess: "Consultants externes, auditeurs",
           },
+          documents: [
+            { id: "doc5", name: "Rapport_Nov.docx", hasCertificate: true, certificateId: "CERT-DOC-004" },
+            { id: "doc6", name: "Analyse_Q4.xlsx", hasCertificate: false },
+          ],
         },
         {
           id: 3,
@@ -430,6 +448,11 @@ export default function FoldersPage() {
             canArchive: true,
             canAnalyze: true,
           },
+          documents: [
+            { id: "doc7", name: "Specs_Alpha.pdf", hasCertificate: true, certificateId: "CERT-DOC-005" },
+            { id: "doc8", name: "Design_Beta.figma", hasCertificate: false },
+            { id: "doc9", name: "Planning.xlsx", hasCertificate: true, certificateId: "CERT-DOC-006" },
+          ],
         },
         {
           id: 4,
@@ -466,6 +489,10 @@ export default function FoldersPage() {
             canArchive: false,
             canAnalyze: true,
           },
+          documents: [
+            { id: "doc10", name: "Budget_2024.xlsx", hasCertificate: true, certificateId: "CERT-DOC-007" },
+            { id: "doc11", name: "Factures_Dec.pdf", hasCertificate: true, certificateId: "CERT-DOC-008" },
+          ],
         },
         {
           id: 5,
@@ -502,6 +529,10 @@ export default function FoldersPage() {
             canArchive: true,
             canAnalyze: true,
           },
+          documents: [
+            { id: "doc12", name: "Politique_Télétravail.pdf", hasCertificate: false },
+            { id: "doc13", name: "Guide_Onboarding.docx", hasCertificate: true, certificateId: "CERT-DOC-009" },
+          ],
         },
         {
           id: 6,
@@ -539,6 +570,11 @@ export default function FoldersPage() {
             canArchive: true,
             canAnalyze: true,
           },
+          documents: [
+            { id: "doc14", name: "Campagne_Q1.psd", hasCertificate: true, certificateId: "CERT-DOC-010" },
+            { id: "doc15", name: "Logo_V2.png", hasCertificate: true, certificateId: "CERT-DOC-011" },
+            { id: "doc16", name: "Brief_campagne.pdf", hasCertificate: false },
+          ],
         },
       ]
 
@@ -704,6 +740,10 @@ export default function FoldersPage() {
 
   const handleViewCertificate = (folder: FolderData) => {
     setActionModal({ type: "certificate", folder, folders: [] })
+  }
+
+  const handleViewDocumentsCertificates = (folder: FolderData) => {
+    setActionModal({ type: "documents_certificates", folder, folders: [] })
   }
 
   const handleDownloadCertificate = (folder: FolderData) => {
@@ -1030,6 +1070,7 @@ export default function FoldersPage() {
         canArchive: true,
         canAnalyze: true,
       },
+      documents: [],
     }
     setFolders((prev) => [...prev, newFolder])
     showNotification("success", `Dossier "${folderName}" créé avec succès`)
@@ -1639,6 +1680,16 @@ export default function FoldersPage() {
                               <ShieldCheck className="h-4 w-4 text-green-600" />
                             </Button>
                           )}
+                          {folder.documents && folder.documents.some((doc) => doc.hasCertificate) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDocumentsCertificates(folder)}
+                              title="Certificats des documents"
+                            >
+                              <FileCheck className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => handleRequestDocument(folder)}>
                             <FileQuestion className="h-4 w-4" />
                           </Button>
@@ -1698,6 +1749,17 @@ export default function FoldersPage() {
                           title="Télécharger le certificat blockchain"
                         >
                           <ShieldCheck className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
+                      {folder.documents && folder.documents.some((doc) => doc.hasCertificate) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDocumentsCertificates(folder)}
+                          className="h-8 w-8 p-0"
+                          title="Certificats des documents"
+                        >
+                          <FileCheck className="h-4 w-4 text-blue-600" />
                         </Button>
                       )}
                       <Button
@@ -1791,7 +1853,120 @@ export default function FoldersPage() {
       {/* Modals */}
       {actionModal.type && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            {/* Documents Certificates Modal */}
+            {actionModal.type === "documents_certificates" && actionModal.folder && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Certificats des documents - {actionModal.folder.name}</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, folder: null, folders: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-3">
+                      <FileCheck className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <h4 className="font-semibold text-blue-900">Certificats des documents</h4>
+                        <p className="text-sm text-blue-700">
+                          Téléchargez les certificats blockchain individuels des documents de ce dossier
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {actionModal.folder.documents?.map((doc) => (
+                      <div key={doc.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <FileText className="h-8 w-8 text-gray-600" />
+                            <div>
+                              <h5 className="font-medium text-gray-900">{doc.name}</h5>
+                              {doc.hasCertificate && doc.certificateId && (
+                                <p className="text-sm text-gray-500">ID: {doc.certificateId}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {doc.hasCertificate ? (
+                              <>
+                                <Badge className="bg-green-100 text-green-800">Certifié</Badge>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    showNotification("info", `Téléchargement du certificat pour ${doc.name}...`)
+                                    setTimeout(() => {
+                                      showNotification("success", `Certificat de ${doc.name} téléchargé`)
+                                      sendFolderChatNotification(
+                                        actionModal.folder!.id.toString(),
+                                        `📜 Certificat du document "${doc.name}" téléchargé`,
+                                        "document_certificate_download",
+                                      )
+                                    }, 1500)
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Télécharger
+                                </Button>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                                Non certifié
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+                    <h5 className="font-medium text-gray-900 mb-3">Actions groupées</h5>
+                    <div className="flex space-x-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const certifiedDocs = actionModal.folder!.documents?.filter((doc) => doc.hasCertificate) || []
+                          showNotification("info", `Téléchargement de ${certifiedDocs.length} certificat(s)...`)
+                          setTimeout(() => {
+                            showNotification("success", `${certifiedDocs.length} certificat(s) téléchargé(s)`)
+                            sendFolderChatNotification(
+                              actionModal.folder!.id.toString(),
+                              `📦 Archive des certificats téléchargée (${certifiedDocs.length} documents)`,
+                              "bulk_certificates_download",
+                            )
+                          }, 2000)
+                        }}
+                      >
+                        <Archive className="h-4 w-4 mr-2" />
+                        Télécharger tous les certificats (.zip)
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          showNotification("info", "Vérification en ligne des certificats...")
+                          setTimeout(() => {
+                            showNotification("success", "Tous les certificats sont valides")
+                          }, 3000)
+                        }}
+                      >
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        Vérifier tous en ligne
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Storage Config Modal */}
             {actionModal.type === "storage_config" && actionModal.folder && (
               <>
