@@ -1,12 +1,34 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { MessageSquare, Search, Plus, Send, Paperclip, Smile, Phone, Video, MoreHorizontal, Users, Hash, Circle, CheckCheck, Clock, ImageIcon, File, Download } from 'lucide-react'
+import {
+  MessageSquare,
+  Search,
+  Plus,
+  Send,
+  Paperclip,
+  Smile,
+  Phone,
+  Video,
+  MoreHorizontal,
+  Users,
+  Circle,
+  CheckCheck,
+  Clock,
+  File,
+  Download,
+  Brain,
+  Shield,
+  TrendingUp,
+  CheckCircle,
+  FileText,
+  BarChart3,
+  Zap,
+} from "lucide-react"
 
 export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState("1")
@@ -30,9 +52,9 @@ export default function ChatPage() {
       name: "Équipe Juridique",
       type: "group",
       avatar: "EJ",
-      lastMessage: "Pierre: Le contrat est prêt pour signature",
+      lastMessage: "IA DocV: Analyse terminée pour Contrat_Client_ABC.pdf",
       lastMessageTime: "13:45",
-      unreadCount: 3,
+      unreadCount: 1,
       isOnline: false,
       isTyping: false,
       members: 5,
@@ -99,7 +121,7 @@ export default function ChatPage() {
       content: "",
       timestamp: "14:25",
       type: "file",
-      fileName: "Contrat_Client_2024.pdf",
+      fileName: "Contrat_Client_ABC.pdf",
       fileSize: "2.3 MB",
       status: "read",
     },
@@ -121,10 +143,97 @@ export default function ChatPage() {
       type: "text",
       status: "delivered",
     },
+    {
+      id: "6",
+      senderId: "ai",
+      senderName: "IA DocV",
+      content: `📄 **Analyse IA du document "Contrat_Client_ABC.pdf"**
+
+**Type de document :** PDF (2.3 MB)
+**Statut :** ✅ Validé
+**Dernière modification :** Il y a 2 heures
+
+**📊 Analyse du contenu :**
+• Document juridique détecté avec haute précision
+• 3 tag(s) identifié(s) : contrat, client, juridique
+• Résumé automatique disponible
+• 47 pages analysées
+• 12 clauses contractuelles détectées
+
+**🎯 Métriques de qualité :**
+• Lisibilité : 92%
+• Conformité juridique : 100%
+• Sécurité documentaire : Maximale
+• Complétude des informations : 95%
+
+**🔍 Points clés identifiés :**
+• Durée du contrat : 12 mois
+• Montant total : 150 000€ HT
+• Clauses de confidentialité : ✅ Présentes et conformes
+• Propriété intellectuelle : ✅ Bien définie
+• Conditions de résiliation : ✅ Équilibrées
+
+**🛡️ Analyse de conformité RGPD :**
+• Données personnelles : ⚠️ Détectées (coordonnées client)
+• Durée de conservation : Conforme (7 ans)
+• Droit à l'oubli : Applicable après expiration
+• Consentement : ✅ Explicite
+
+**⚡ Recommandations :**
+• ✅ Document prêt pour signature
+• 📋 Archivage permanent recommandé
+• 🔄 Révision suggérée dans 11 mois
+• 📧 Notification client automatique activée
+
+**📈 Score global : 94/100**
+
+*Analyse générée automatiquement par l'IA DocV - Fiabilité : 98%*`,
+      timestamp: "14:35",
+      type: "ai_analysis",
+      status: "delivered",
+      analysisType: "document",
+      documentName: "Contrat_Client_ABC.pdf",
+      confidence: 98,
+      processingTime: "2.3s",
+    },
+    {
+      id: "7",
+      senderId: "ai",
+      senderName: "IA DocV",
+      content: `🔍 **Analyse comparative - Dossier Contrats**
+
+**📊 Analyse de 8 documents similaires :**
+• Contrats clients : 5 documents
+• Avenants : 2 documents  
+• Conditions générales : 1 document
+
+**📈 Tendances identifiées :**
+• Montant moyen des contrats : +15% vs trimestre précédent
+• Durée moyenne : 14 mois (stable)
+• Taux de renouvellement : 87% (↗️ +5%)
+
+**⚠️ Points d'attention :**
+• 2 contrats expirent dans les 30 jours
+• 1 clause de révision tarifaire à activer
+• Mise à jour RGPD requise sur 3 documents
+
+**🎯 Actions recommandées :**
+1. Planifier renouvellement contrats Q1 2024
+2. Standardiser les clauses de confidentialité
+3. Créer un modèle basé sur ce contrat (performance optimale)
+
+*Analyse prédictive activée - Prochaine révision : 15 février 2024*`,
+      timestamp: "14:37",
+      type: "ai_analysis",
+      status: "delivered",
+      analysisType: "comparative",
+      confidence: 95,
+      processingTime: "4.1s",
+    },
   ]
 
   const filteredConversations = conversations.filter((conv) =>
-    conv.name.toLowerCase().includes(searchTerm.toLowerCase())
+    conv.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const currentConversation = conversations.find((conv) => conv.id === selectedConversation)
@@ -148,6 +257,82 @@ export default function ChatPage() {
       default:
         return null
     }
+  }
+
+  const getAnalysisIcon = (analysisType: string) => {
+    switch (analysisType) {
+      case "document":
+        return <FileText className="h-4 w-4" />
+      case "comparative":
+        return <BarChart3 className="h-4 w-4" />
+      case "security":
+        return <Shield className="h-4 w-4" />
+      case "performance":
+        return <TrendingUp className="h-4 w-4" />
+      default:
+        return <Brain className="h-4 w-4" />
+    }
+  }
+
+  const renderAIMessage = (message: any) => {
+    return (
+      <div className="flex justify-start">
+        <div className="max-w-4xl">
+          {/* AI Header */}
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+              <Brain className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-900">IA DocV</span>
+              <Badge className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200 text-xs">
+                {getAnalysisIcon(message.analysisType)}
+                <span className="ml-1">
+                  {message.analysisType === "document"
+                    ? "Analyse Document"
+                    : message.analysisType === "comparative"
+                      ? "Analyse Comparative"
+                      : "Analyse IA"}
+                </span>
+              </Badge>
+              {message.confidence && (
+                <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  {message.confidence}% fiable
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* AI Message Content */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 shadow-sm">
+            <div className="prose prose-sm max-w-none">
+              <div className="whitespace-pre-line text-gray-800 leading-relaxed">{message.content}</div>
+            </div>
+
+            {/* AI Message Footer */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-purple-200">
+              <div className="flex items-center space-x-4 text-xs text-gray-600">
+                <div className="flex items-center space-x-1">
+                  <Zap className="h-3 w-3" />
+                  <span>Traité en {message.processingTime}</span>
+                </div>
+                {message.documentName && (
+                  <div className="flex items-center space-x-1">
+                    <FileText className="h-3 w-3" />
+                    <span>{message.documentName}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-purple-600">{message.timestamp}</span>
+                <div>{getStatusIcon(message.status)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -206,11 +391,19 @@ export default function ChatPage() {
                       {conversation.isTyping ? (
                         <span className="text-blue-600 italic">En train d'écrire...</span>
                       ) : (
-                        conversation.lastMessage
+                        <span
+                          className={conversation.lastMessage.includes("IA DocV:") ? "text-purple-600 font-medium" : ""}
+                        >
+                          {conversation.lastMessage}
+                        </span>
                       )}
                     </p>
                     {conversation.unreadCount > 0 && (
-                      <Badge className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                      <Badge
+                        className={`text-white text-xs px-2 py-1 rounded-full ${
+                          conversation.lastMessage.includes("IA DocV:") ? "bg-purple-600" : "bg-blue-600"
+                        }`}
+                      >
                         {conversation.unreadCount}
                       </Badge>
                     )}
@@ -251,8 +444,8 @@ export default function ChatPage() {
                       {currentConversation.type === "group"
                         ? `${currentConversation.members} membres`
                         : currentConversation.isOnline
-                        ? "En ligne"
-                        : "Hors ligne"}
+                          ? "En ligne"
+                          : "Hors ligne"}
                     </p>
                   </div>
                 </div>
@@ -273,42 +466,41 @@ export default function ChatPage() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.senderId === "me" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.senderId === "me"
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-gray-900 shadow-sm"
-                    }`}
-                  >
-                    {message.type === "text" ? (
-                      <p className="text-sm">{message.content}</p>
-                    ) : message.type === "file" ? (
-                      <div className="flex items-center space-x-3 p-2">
-                        <File className="h-8 w-8 text-gray-400" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{message.fileName}</p>
-                          <p className="text-xs text-gray-500">{message.fileSize}</p>
+                <div key={message.id}>
+                  {message.type === "ai_analysis" ? (
+                    renderAIMessage(message)
+                  ) : (
+                    <div className={`flex ${message.senderId === "me" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          message.senderId === "me" ? "bg-blue-600 text-white" : "bg-white text-gray-900 shadow-sm"
+                        }`}
+                      >
+                        {message.type === "text" ? (
+                          <p className="text-sm">{message.content}</p>
+                        ) : message.type === "file" ? (
+                          <div className="flex items-center space-x-3 p-2">
+                            <File className="h-8 w-8 text-gray-400" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{message.fileName}</p>
+                              <p className="text-xs text-gray-500">{message.fileSize}</p>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : null}
+                        <div
+                          className={`flex items-center justify-between mt-1 ${
+                            message.senderId === "me" ? "text-blue-100" : "text-gray-500"
+                          }`}
+                        >
+                          <span className="text-xs">{message.timestamp}</span>
+                          {message.senderId === "me" && <div className="ml-2">{getStatusIcon(message.status)}</div>}
                         </div>
-                        <Button variant="outline" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
                       </div>
-                    ) : null}
-                    <div
-                      className={`flex items-center justify-between mt-1 ${
-                        message.senderId === "me" ? "text-blue-100" : "text-gray-500"
-                      }`}
-                    >
-                      <span className="text-xs">{message.timestamp}</span>
-                      {message.senderId === "me" && (
-                        <div className="ml-2">{getStatusIcon(message.status)}</div>
-                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

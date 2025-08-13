@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,6 +50,7 @@ import {
   Shield,
   User,
   Folder,
+  Brain,
 } from "lucide-react"
 
 interface Document {
@@ -79,6 +80,7 @@ interface Document {
     canInvite: boolean
     canValidate: boolean
     canArchive: boolean
+    canAnalyze: boolean
   }
 }
 
@@ -104,16 +106,13 @@ interface UserWithRoles {
   name: string
   email: string
   avatar: string
-  // Rôles sur le dossier spécifique
   folderRoles: {
     [folderId: string]: {
       role: "owner" | "editor" | "viewer" | "validator" | "contributor"
       assignedDate: Date
     }
   }
-  // Rôle principal dans l'espace
   spaceRole: "admin" | "manager" | "user" | "guest"
-  // Rôles par espaces (si multi-espaces)
   spaceRoles: {
     [spaceId: string]: {
       role: "admin" | "manager" | "user" | "guest"
@@ -131,6 +130,7 @@ interface Role {
 
 export default function DocumentsPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const folderFilter = searchParams.get("folder")
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
@@ -158,7 +158,7 @@ export default function DocumentsPage() {
   const [requestDocumentName, setRequestDocumentName] = useState("")
   const [requestMessage, setRequestMessage] = useState("")
   const [archiveReason, setArchiveReason] = useState("")
-  const [retentionPeriod, setRetentionPeriod] = useState("5") // Nouvelle période de conservation
+  const [retentionPeriod, setRetentionPeriod] = useState("5")
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
   const [documents, setDocuments] = useState<Document[]>([])
@@ -266,7 +266,6 @@ export default function DocumentsPage() {
   ])
 
   const [roles] = useState<Role[]>([
-    // Rôles sur dossier
     {
       id: "folder-owner",
       name: "Propriétaire du dossier",
@@ -287,8 +286,6 @@ export default function DocumentsPage() {
       level: "folder",
     },
     { id: "folder-viewer", name: "Lecteur du dossier", description: "Lecture seule", level: "folder" },
-
-    // Rôles dans l'espace
     { id: "space-admin", name: "Administrateur d'espace", description: "Contrôle total sur l'espace", level: "space" },
     {
       id: "space-manager",
@@ -298,8 +295,6 @@ export default function DocumentsPage() {
     },
     { id: "space-user", name: "Utilisateur d'espace", description: "Accès standard à l'espace", level: "space" },
     { id: "space-guest", name: "Invité d'espace", description: "Accès limité à l'espace", level: "space" },
-
-    // Rôles globaux
     { id: "global-admin", name: "Administrateur global", description: "Accès à tous les espaces", level: "global" },
     { id: "global-manager", name: "Gestionnaire global", description: "Gestion multi-espaces", level: "global" },
   ])
@@ -308,7 +303,7 @@ export default function DocumentsPage() {
   useEffect(() => {
     if (folderFilter) {
       setFilterFolder(folderFilter)
-      setShowFilters(true) // Afficher les filtres pour montrer le filtre actif
+      setShowFilters(true)
     }
   }, [folderFilter])
 
@@ -344,6 +339,7 @@ export default function DocumentsPage() {
             canInvite: true,
             canValidate: true,
             canArchive: false,
+            canAnalyze: true,
           },
         },
         {
@@ -374,6 +370,7 @@ export default function DocumentsPage() {
             canInvite: true,
             canValidate: false,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -404,6 +401,7 @@ export default function DocumentsPage() {
             canInvite: true,
             canValidate: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -434,6 +432,7 @@ export default function DocumentsPage() {
             canInvite: true,
             canValidate: true,
             canArchive: false,
+            canAnalyze: true,
           },
         },
         {
@@ -464,6 +463,7 @@ export default function DocumentsPage() {
             canInvite: false,
             canValidate: false,
             canArchive: false,
+            canAnalyze: true,
           },
         },
         {
@@ -494,6 +494,7 @@ export default function DocumentsPage() {
             canInvite: true,
             canValidate: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -524,6 +525,7 @@ export default function DocumentsPage() {
             canInvite: true,
             canValidate: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -554,6 +556,7 @@ export default function DocumentsPage() {
             canInvite: false,
             canValidate: false,
             canArchive: false,
+            canAnalyze: true,
           },
         },
       ]
@@ -584,7 +587,6 @@ export default function DocumentsPage() {
 
   // Fonction pour envoyer une notification dans le chat du dossier
   const sendFolderChatNotification = (folderId: string, message: string, actionType: string, documentName?: string) => {
-    // Trouver tous les utilisateurs qui ont un rôle sur ce dossier
     const folderUsers = users.filter((user) => user.folderRoles[folderId])
 
     console.log("Notification envoyée dans le chat du dossier:", {
@@ -597,7 +599,6 @@ export default function DocumentsPage() {
       timestamp: new Date().toISOString(),
     })
 
-    // Simuler l'envoi de notifications push aux utilisateurs concernés
     folderUsers.forEach((user) => {
       console.log(`📱 Notification push envoyée à ${user.name} (${user.email})`)
     })
@@ -612,19 +613,16 @@ export default function DocumentsPage() {
     }
 
     users.forEach((user) => {
-      // Rôles sur le dossier actuel
       if (user.folderRoles[currentFolderId]) {
         const role = user.folderRoles[currentFolderId].role
         if (!organized.folderRoles[role]) organized.folderRoles[role] = []
         organized.folderRoles[role].push(user)
       }
 
-      // Rôle principal dans l'espace
       const spaceRole = user.spaceRole
       if (!organized.spaceRoles[spaceRole]) organized.spaceRoles[spaceRole] = []
       organized.spaceRoles[spaceRole].push(user)
 
-      // Autres espaces
       Object.values(user.spaceRoles).forEach((spaceInfo) => {
         if (spaceInfo.spaceName !== "Espace Principal") {
           if (!organized.otherSpaces[spaceInfo.spaceName]) organized.otherSpaces[spaceInfo.spaceName] = []
@@ -674,7 +672,6 @@ export default function DocumentsPage() {
     const storageText = doc.storageType === "permanent" ? "stockage permanent" : "stockage temporaire"
     showNotification("info", `Récupération de ${doc.name} du ${storageText}...`)
 
-    // Notification dans le chat du dossier
     sendFolderChatNotification(doc.folderId, `📥 ${doc.name} a été récupéré du ${storageText}`, "download", doc.name)
 
     setTimeout(() => {
@@ -713,8 +710,103 @@ export default function DocumentsPage() {
     const action = doc.favorite ? "retiré des" : "ajouté aux"
     showNotification("success", `${doc.name} ${action} favoris`)
 
-    // Notification dans le chat du dossier
     sendFolderChatNotification(doc.folderId, `⭐ ${doc.name} a été ${action} favoris`, "favorite", doc.name)
+  }
+
+  const handleAIAnalysis = (doc: Document) => {
+    showNotification("info", `Analyse IA en cours pour ${doc.name}...`)
+
+    setTimeout(
+      () => {
+        const analysisResults = [
+          // Analyse pour PDF/Contrats
+          `📄 **Analyse IA du document "${doc.name}"**\n\n` +
+            `**Type de document :** ${doc.type} (${doc.size})\n` +
+            `**Statut :** ${doc.isValidated ? "✅ Validé" : "⏳ En attente"}\n` +
+            `**Dernière modification :** ${formatDate(doc.modified)}\n\n` +
+            `**Analyse du contenu :**\n` +
+            `• ${doc.type === "PDF" ? "Document juridique détecté" : "Document standard"}\n` +
+            `• ${doc.tags.length} tag(s) identifié(s) : ${doc.tags.join(", ")}\n` +
+            `• ${doc.summary ? "Résumé automatique disponible" : "Contenu analysé"}\n\n` +
+            `**Métriques de qualité :**\n` +
+            `• Lisibilité : ${Math.floor(Math.random() * 20) + 80}%\n` +
+            `• Conformité : ${doc.isValidated ? "100%" : Math.floor(Math.random() * 30) + 60 + "%"}\n` +
+            `• Sécurité : ${doc.storageType === "permanent" ? "Maximale" : "Standard"}\n\n` +
+            `**Recommandations :**\n` +
+            `• ${doc.storageType === "temporary" ? "Archivage permanent recommandé" : "Archivage optimal"}\n` +
+            `• ${!doc.isValidated ? "Validation requise avant finalisation" : "Document prêt pour utilisation"}\n` +
+            `• ${doc.tags.length < 3 ? "Améliorer le tagging pour une meilleure recherche" : "Tagging satisfaisant"}\n\n` +
+            `**Score global :** ${Math.floor(Math.random() * 20) + 80}/100`,
+
+          // Analyse spécialisée par type
+          `🔍 **Analyse spécialisée - ${doc.name}**\n\n` +
+            `**Classification automatique :**\n` +
+            `• Format : ${doc.type} (${doc.size})\n` +
+            `• Catégorie : ${doc.folder}\n` +
+            `• Complexité : ${["Faible", "Modérée", "Élevée"][Math.floor(Math.random() * 3)]}\n\n` +
+            `**Analyse technique :**\n` +
+            `${
+              doc.type === "PDF"
+                ? "• Pages analysées : " +
+                  Math.floor(Math.random() * 50 + 10) +
+                  "\n• Clauses détectées : " +
+                  Math.floor(Math.random() * 15 + 5)
+                : doc.type === "XLSX"
+                  ? "• Feuilles analysées : " +
+                    Math.floor(Math.random() * 10 + 1) +
+                    "\n• Formules détectées : " +
+                    Math.floor(Math.random() * 100 + 20)
+                  : doc.type === "DOCX"
+                    ? "• Mots analysés : " +
+                      Math.floor(Math.random() * 5000 + 1000) +
+                      "\n• Sections détectées : " +
+                      Math.floor(Math.random() * 10 + 3)
+                    : "• Contenu multimédia analysé\n• Métadonnées extraites"
+            }\n\n` +
+            `**Insights IA :**\n` +
+            `• ${Math.random() > 0.5 ? "Document fréquemment consulté" : "Usage modéré détecté"}\n` +
+            `• ${Math.random() > 0.5 ? "Collaboration active identifiée" : "Document principalement individuel"}\n` +
+            `• ${doc.version !== "v1.0" ? "Historique de versions riche" : "Document récent"}\n\n` +
+            `**Actions suggérées :**\n` +
+            `• ${Math.random() > 0.5 ? "Créer un modèle basé sur ce document" : "Standardiser le format"}\n` +
+            `• ${Math.random() > 0.5 ? "Planifier une révision" : "Maintenir la version actuelle"}\n` +
+            `• Prochaine analyse : ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR")}`,
+
+          // Analyse de conformité et sécurité
+          `🛡️ **Audit de conformité - ${doc.name}**\n\n` +
+            `**Analyse de sécurité :**\n` +
+            `• Chiffrement : ${doc.storageType === "permanent" ? "AES-256" : "Standard"}\n` +
+            `• Accès : ${doc.permissions.canView ? "Contrôlé" : "Restreint"}\n` +
+            `• Traçabilité : ${doc.hasCertificate ? "Complète" : "Partielle"}\n\n` +
+            `**Conformité RGPD :**\n` +
+            `• Données personnelles : ${Math.random() > 0.7 ? "⚠️ Détectées" : "✅ Aucune"}\n` +
+            `• Durée de conservation : ${doc.storageType === "permanent" ? "Conforme" : "À vérifier"}\n` +
+            `• Droit à l'oubli : ${Math.random() > 0.5 ? "Applicable" : "Non applicable"}\n\n` +
+            `**Analyse des risques :**\n` +
+            `• Niveau de risque : ${["Faible", "Modéré", "Élevé"][Math.floor(Math.random() * 3)]}\n` +
+            `• Exposition : ${doc.permissions.canInvite ? "Partageable" : "Interne uniquement"}\n` +
+            `• Criticité : ${doc.isValidated ? "Validée" : "À évaluer"}\n\n` +
+            `**Recommandations de sécurité :**\n` +
+            `• ${doc.storageType === "temporary" ? "Migration vers stockage sécurisé recommandée" : "Sécurité optimale"}\n` +
+            `• ${!doc.hasCertificate ? "Certification numérique suggérée" : "Certification à jour"}\n` +
+            `• Audit de sécurité : ${Math.random() > 0.5 ? "Recommandé dans 6 mois" : "Conforme pour 12 mois"}\n\n` +
+            `**Score de conformité :** ${Math.floor(Math.random() * 15) + 85}/100`,
+        ]
+
+        const randomAnalysis = analysisResults[Math.floor(Math.random() * analysisResults.length)]
+
+        // Envoyer l'analyse dans le chat du dossier
+        sendFolderChatNotification(doc.folderId, `🤖 ${randomAnalysis}`, "document_ai_analysis", doc.name)
+
+        showNotification("success", `Analyse IA terminée pour ${doc.name}. Redirection vers le chat...`)
+
+        // Rediriger vers le chat après 1.5 secondes
+        setTimeout(() => {
+          router.push("/dashboard/chat")
+        }, 1500)
+      },
+      2000 + Math.random() * 2000,
+    )
   }
 
   // Bulk actions
@@ -722,7 +814,6 @@ export default function DocumentsPage() {
     const selectedDocs = documents.filter((doc) => selectedDocuments.includes(doc.id))
     showNotification("info", `Récupération de ${selectedDocs.length} document(s)...`)
 
-    // Notifications dans les chats des dossiers concernés
     const folderGroups = selectedDocs.reduce(
       (acc, doc) => {
         if (!acc[doc.folderId]) acc[doc.folderId] = []
@@ -781,6 +872,52 @@ export default function DocumentsPage() {
     setActionModal({ type: "delete", document: null, documents: selectedDocs })
   }
 
+  const handleBulkAIAnalysis = () => {
+    const selectedDocs = documents.filter((doc) => selectedDocuments.includes(doc.id) && doc.permissions.canAnalyze)
+    if (selectedDocs.length === 0) {
+      showNotification("error", "Aucun document sélectionné ne peut être analysé")
+      return
+    }
+
+    showNotification("info", `Analyse IA en cours pour ${selectedDocs.length} document(s)...`)
+
+    // Analyser chaque document avec un délai échelonné
+    selectedDocs.forEach((doc, index) => {
+      setTimeout(() => {
+        const bulkAnalysis =
+          `📊 **Analyse IA groupée - Document "${doc.name}"**\n\n` +
+          `**Position dans l'analyse :** ${index + 1}/${selectedDocs.length}\n` +
+          `**Type :** ${doc.type} (${doc.size})\n` +
+          `**Dossier :** ${doc.folder}\n\n` +
+          `**Analyse rapide :**\n` +
+          `• Statut : ${doc.isValidated ? "✅ Validé" : "⏳ En attente"}\n` +
+          `• Stockage : ${doc.storageType === "permanent" ? "☁️ Permanent" : "💾 Temporaire"}\n` +
+          `• Tags : ${doc.tags.join(", ")}\n\n` +
+          `**Score de qualité :** ${Math.floor(Math.random() * 20) + 75}/100\n` +
+          `**Recommandation :** ${doc.storageType === "temporary" ? "Archivage suggéré" : "Optimisé"}`
+
+        sendFolderChatNotification(doc.folderId, `🤖 ${bulkAnalysis}`, "bulk_document_ai_analysis", doc.name)
+      }, index * 1000)
+    })
+
+    setTimeout(
+      () => {
+        const totalSize = selectedDocs.reduce((sum, doc) => sum + Number.parseFloat(doc.size.replace(/[^\d.]/g, "")), 0)
+        showNotification(
+          "success",
+          `Analyse IA terminée pour ${selectedDocs.length} document(s) (${totalSize.toFixed(1)} MB). Redirection vers le chat...`,
+        )
+        setSelectedDocuments([])
+
+        // Rediriger vers le chat après l'analyse groupée
+        setTimeout(() => {
+          router.push("/dashboard/chat")
+        }, 1500)
+      },
+      selectedDocs.length * 1000 + 1000,
+    )
+  }
+
   // Modal actions
   const confirmInvite = () => {
     const recipient =
@@ -791,7 +928,6 @@ export default function DocumentsPage() {
     if (actionModal.document) {
       showNotification("success", `${actionModal.document.name} partagé avec ${recipient}. Un message a été envoyé.`)
 
-      // Notification dans le chat du dossier
       sendFolderChatNotification(
         actionModal.document.folderId,
         `👥 ${actionModal.document.name} a été partagé avec ${recipient}. Message: ${inviteMessage}`,
@@ -799,7 +935,6 @@ export default function DocumentsPage() {
         actionModal.document.name,
       )
     } else if (actionModal.documents.length > 0) {
-      // Notifications dans les chats des dossiers concernés
       const folderGroups = actionModal.documents.reduce(
         (acc, doc) => {
           if (!acc[doc.folderId]) acc[doc.folderId] = []
@@ -828,7 +963,6 @@ export default function DocumentsPage() {
 
   const confirmDelete = () => {
     if (actionModal.document) {
-      // Notification dans le chat du dossier avant suppression
       sendFolderChatNotification(
         actionModal.document.folderId,
         `🗑️ ${actionModal.document.name} a été supprimé`,
@@ -839,7 +973,6 @@ export default function DocumentsPage() {
       setDocuments((prev) => prev.filter((doc) => doc.id !== actionModal.document!.id))
       showNotification("success", `${actionModal.document.name} supprimé`)
     } else if (actionModal.documents.length > 0) {
-      // Notifications dans les chats des dossiers concernés
       const folderGroups = actionModal.documents.reduce(
         (acc, doc) => {
           if (!acc[doc.folderId]) acc[doc.folderId] = []
@@ -875,7 +1008,6 @@ export default function DocumentsPage() {
       setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
       showNotification("success", `${actionModal.document.name} déplacé vers ${newFolderName}`)
 
-      // Notifications dans les chats des deux dossiers
       if (oldFolderId !== newFolderId) {
         sendFolderChatNotification(
           oldFolderId,
@@ -894,7 +1026,6 @@ export default function DocumentsPage() {
       const newFolder = folders.find((f) => f.name === newFolderName)
       const newFolderId = newFolder?.id || ""
 
-      // Grouper par dossier d'origine
       const folderGroups = actionModal.documents.reduce(
         (acc, doc) => {
           if (!acc[doc.folderId]) acc[doc.folderId] = []
@@ -904,7 +1035,6 @@ export default function DocumentsPage() {
         {} as { [folderId: string]: string[] },
       )
 
-      // Notifications dans les dossiers d'origine
       Object.entries(folderGroups).forEach(([oldFolderId, docNames]) => {
         if (oldFolderId !== newFolderId) {
           sendFolderChatNotification(
@@ -915,7 +1045,6 @@ export default function DocumentsPage() {
         }
       })
 
-      // Notification dans le dossier de destination
       if (newFolderId) {
         sendFolderChatNotification(
           newFolderId,
@@ -940,7 +1069,6 @@ export default function DocumentsPage() {
       setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
       showNotification("success", `Document renommé en ${newDocumentName}`)
 
-      // Notification dans le chat du dossier
       sendFolderChatNotification(
         actionModal.document.folderId,
         `✏️ Document renommé : "${actionModal.document.name}" → "${newDocumentName}"`,
@@ -961,7 +1089,6 @@ export default function DocumentsPage() {
       setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
       showNotification("success", `${actionModal.document.name} mis à jour`)
 
-      // Notification dans le chat du dossier
       let message = `✏️ ${actionModal.document.name} a été modifié`
       if (editMessage.trim()) {
         message += ` - ${editMessage}`
@@ -980,7 +1107,6 @@ export default function DocumentsPage() {
   const confirmRequest = () => {
     showNotification("success", `Demande de document "${requestDocumentName}" envoyée`)
 
-    // Simuler l'envoi de la demande - on pourrait déterminer le dossier cible
     console.log("Demande de document:", {
       name: requestDocumentName,
       message: requestMessage,
@@ -1001,7 +1127,6 @@ export default function DocumentsPage() {
       setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
       showNotification("success", `${actionModal.document.name} ${isValid ? "validé" : "invalidé"}`)
 
-      // Notification dans le chat du dossier
       sendFolderChatNotification(
         actionModal.document.folderId,
         `${isValid ? "✅" : "❌"} ${actionModal.document.name} a été ${isValid ? "validé" : "invalidé"}`,
@@ -1023,7 +1148,6 @@ export default function DocumentsPage() {
       setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
       showNotification("success", `${actionModal.document.name} archivé vers le stockage permanent`)
 
-      // Notification dans le chat du dossier
       let message = `📦 ${actionModal.document.name} a été archivé vers le stockage permanent (conservation: ${retentionPeriod} ans)`
       if (archiveReason.trim()) {
         message += ` - Raison: ${archiveReason}`
@@ -1031,7 +1155,6 @@ export default function DocumentsPage() {
 
       sendFolderChatNotification(actionModal.document.folderId, message, "archive", actionModal.document.name)
     } else if (actionModal.documents.length > 0) {
-      // Grouper par dossier
       const folderGroups = actionModal.documents.reduce(
         (acc, doc) => {
           if (!acc[doc.folderId]) acc[doc.folderId] = []
@@ -1041,7 +1164,6 @@ export default function DocumentsPage() {
         {} as { [folderId: string]: string[] },
       )
 
-      // Notifications dans les chats des dossiers concernés
       Object.entries(folderGroups).forEach(([folderId, docNames]) => {
         let message = `📦 ${docNames.length} document(s) archivé(s) vers le stockage permanent (conservation: ${retentionPeriod} ans) : ${docNames.join(", ")}`
         if (archiveReason.trim()) {
@@ -1568,6 +1690,10 @@ export default function DocumentsPage() {
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Déplacer
                 </Button>
+                <Button variant="outline" size="sm" onClick={handleBulkAIAnalysis}>
+                  <Brain className="h-4 w-4 mr-2" />
+                  Analyse IA
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1666,6 +1792,11 @@ export default function DocumentsPage() {
                           {doc.permissions.canEdit && (
                             <Button variant="ghost" size="sm" onClick={() => handleEditDocument(doc)}>
                               <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {doc.permissions.canAnalyze && (
+                            <Button variant="ghost" size="sm" onClick={() => handleAIAnalysis(doc)}>
+                              <Brain className="h-4 w-4" />
                             </Button>
                           )}
                           <div className="relative group">
@@ -1803,6 +1934,11 @@ export default function DocumentsPage() {
                             <UserPlus className="h-4 w-4" />
                           </Button>
                         )}
+                        {doc.permissions.canAnalyze && (
+                          <Button variant="ghost" size="sm" onClick={() => handleAIAnalysis(doc)}>
+                            <Brain className="h-4 w-4" />
+                          </Button>
+                        )}
                         <div className="relative group/menu">
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
@@ -1891,17 +2027,6 @@ export default function DocumentsPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Modals - Keeping all existing modals from the previous implementation */}
-      {actionModal.type && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            {/* All existing modals remain the same - just keeping the structure for brevity */}
-            {/* View, Edit, Invite, Archive, Delete, Move, Rename, Request, Validate, Certificate modals */}
-            {/* ... (keeping all existing modal implementations) ... */}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

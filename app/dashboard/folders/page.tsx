@@ -35,7 +35,6 @@ import {
   Crown,
   Shield,
   User,
-  AlertTriangle,
   CheckCircle,
   XCircle,
   Info,
@@ -47,6 +46,8 @@ import {
   Zap,
   Server,
   Snowflake,
+  Brain,
+  AlertTriangle,
 } from "lucide-react"
 
 interface FolderData {
@@ -77,6 +78,7 @@ interface FolderData {
     canDelete: boolean
     canInvite: boolean
     canArchive: boolean
+    canAnalyze: boolean
   }
 }
 
@@ -308,6 +310,7 @@ export default function FoldersPage() {
             canDelete: true,
             canInvite: true,
             canArchive: false,
+            canAnalyze: true,
           },
         },
         {
@@ -336,6 +339,7 @@ export default function FoldersPage() {
             canDelete: true,
             canInvite: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -364,6 +368,7 @@ export default function FoldersPage() {
             canDelete: true,
             canInvite: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -392,6 +397,7 @@ export default function FoldersPage() {
             canDelete: true,
             canInvite: true,
             canArchive: false,
+            canAnalyze: true,
           },
         },
         {
@@ -420,6 +426,7 @@ export default function FoldersPage() {
             canDelete: true,
             canInvite: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
         {
@@ -448,6 +455,7 @@ export default function FoldersPage() {
             canDelete: false,
             canInvite: true,
             canArchive: true,
+            canAnalyze: true,
           },
         },
       ]
@@ -543,6 +551,68 @@ export default function FoldersPage() {
     setActionModal({ type: "archive", folder, folders: [] })
   }
 
+  const handleAIAnalysis = (folder: FolderData) => {
+    showNotification("info", `Analyse IA en cours pour ${folder.name}...`)
+
+    // Simuler une analyse IA
+    setTimeout(
+      () => {
+        const analysisResults = [
+          `📊 **Analyse du dossier "${folder.name}"**\n\n` +
+            `**Contenu :** ${folder.documentsCount} documents analysés (${folder.size})\n` +
+            `**Thématiques principales :** ${folder.tags.join(", ")}\n` +
+            `**Niveau d'activité :** ${folder.activity.length > 2 ? "Élevé" : "Modéré"} (dernière modification ${formatDate(folder.modified)})\n\n` +
+            `**Recommandations :**\n` +
+            `• ${folder.storageType === "temporary" ? "Considérer l'archivage vers le stockage permanent" : "Dossier déjà archivé de manière optimale"}\n` +
+            `• ${folder.access === "private" ? "Évaluer les possibilités de partage avec l'équipe" : "Partage actuel avec " + folder.members.length + " membre(s)"}\n` +
+            `• Dernière activité significative détectée il y a ${Math.floor(Math.random() * 7) + 1} jour(s)\n\n` +
+            `**Score de pertinence :** ${Math.floor(Math.random() * 30) + 70}/100`,
+
+          `🔍 **Analyse approfondie du dossier "${folder.name}"**\n\n` +
+            `**Structure documentaire :**\n` +
+            `• ${Math.floor(folder.documentsCount * 0.4)} documents principaux\n` +
+            `• ${Math.floor(folder.documentsCount * 0.3)} documents de support\n` +
+            `• ${Math.floor(folder.documentsCount * 0.3)} documents annexes\n\n` +
+            `**Analyse temporelle :**\n` +
+            `• Création : ${folder.created.toLocaleDateString("fr-FR")}\n` +
+            `• Pic d'activité détecté en ${new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}\n` +
+            `• Tendance : ${Math.random() > 0.5 ? "Croissante" : "Stable"}\n\n` +
+            `**Recommandations stratégiques :**\n` +
+            `• ${folder.documentsCount > 50 ? "Envisager une réorganisation en sous-dossiers" : "Structure actuelle optimale"}\n` +
+            `• ${folder.members.length < 3 ? "Potentiel de collaboration à explorer" : "Équipe collaborative active"}\n` +
+            `• Prochaine révision recommandée : ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR")}`,
+
+          `🎯 **Insights IA pour "${folder.name}"**\n\n` +
+            `**Analyse sémantique :**\n` +
+            `• Cohérence thématique : ${Math.floor(Math.random() * 20) + 80}%\n` +
+            `• Mots-clés dominants : ${folder.tags.slice(0, 3).join(", ")}\n` +
+            `• Complexité moyenne : ${["Faible", "Modérée", "Élevée"][Math.floor(Math.random() * 3)]}\n\n` +
+            `**Patterns détectés :**\n` +
+            `• ${Math.random() > 0.5 ? "Cycle de révision régulier identifié" : "Activité sporadique détectée"}\n` +
+            `• ${Math.random() > 0.5 ? "Collaboration inter-équipes active" : "Usage principalement individuel"}\n` +
+            `• ${folder.storageType === "permanent" ? "Archivage conforme aux bonnes pratiques" : "Optimisation de stockage possible"}\n\n` +
+            `**Actions suggérées :**\n` +
+            `• ${Math.random() > 0.5 ? "Créer un template basé sur ce dossier" : "Standardiser la nomenclature"}\n` +
+            `• ${Math.random() > 0.5 ? "Planifier une session de nettoyage" : "Maintenir la structure actuelle"}\n` +
+            `• Prochaine analyse automatique : ${new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR")}`,
+        ]
+
+        const randomAnalysis = analysisResults[Math.floor(Math.random() * analysisResults.length)]
+
+        // Envoyer l'analyse dans le chat du dossier
+        sendFolderChatNotification(folder.id.toString(), `🤖 ${randomAnalysis}`, "ai_analysis")
+
+        showNotification("success", `Analyse IA terminée pour ${folder.name}. Redirection vers le chat...`)
+
+        // Rediriger vers le chat après 1.5 secondes
+        setTimeout(() => {
+          router.push("/dashboard/chat")
+        }, 1500)
+      },
+      2000 + Math.random() * 3000,
+    )
+  }
+
   const handleDeleteFolder = (folder: FolderData) => {
     setActionModal({ type: "delete", folder, folders: [] })
   }
@@ -609,6 +679,54 @@ export default function FoldersPage() {
     setArchiveReason("")
     setRetentionPeriod("5")
     setActionModal({ type: "archive", folder: null, folders: selectedFolderData })
+  }
+
+  const handleBulkAIAnalysis = () => {
+    const selectedFolderData = folders.filter(
+      (folder) => selectedFolders.includes(folder.id) && folder.permissions.canAnalyze,
+    )
+    if (selectedFolderData.length === 0) {
+      showNotification("error", "Aucun dossier sélectionné ne peut être analysé")
+      return
+    }
+
+    showNotification("info", `Analyse IA en cours pour ${selectedFolderData.length} dossier(s)...`)
+
+    // Analyser chaque dossier avec un délai échelonné
+    selectedFolderData.forEach((folder, index) => {
+      setTimeout(() => {
+        const bulkAnalysis =
+          `📊 **Analyse IA groupée - Dossier "${folder.name}"**\n\n` +
+          `**Position dans l'analyse :** ${index + 1}/${selectedFolderData.length}\n` +
+          `**Contenu :** ${folder.documentsCount} documents (${folder.size})\n` +
+          `**Tags :** ${folder.tags.join(", ")}\n\n` +
+          `**Analyse comparative :**\n` +
+          `• Taille relative : ${folder.documentsCount > 40 ? "Au-dessus de la moyenne" : "Dans la moyenne"}\n` +
+          `• Activité : ${folder.activity.length > 1 ? "Active" : "Modérée"}\n` +
+          `• Collaboration : ${folder.members.length} membre(s)\n\n` +
+          `**Recommandation :** ${folder.storageType === "temporary" ? "Candidat à l'archivage" : "Archivage optimal"}\n` +
+          `**Score global :** ${Math.floor(Math.random() * 30) + 70}/100`
+
+        sendFolderChatNotification(folder.id.toString(), `🤖 ${bulkAnalysis}`, "bulk_ai_analysis")
+      }, index * 1500) // Échelonner les analyses
+    })
+
+    setTimeout(
+      () => {
+        const totalDocs = selectedFolderData.reduce((sum, folder) => sum + folder.documentsCount, 0)
+        showNotification(
+          "success",
+          `Analyse IA terminée pour ${selectedFolderData.length} dossier(s) (${totalDocs} documents). Redirection vers le chat...`,
+        )
+        setSelectedFolders([])
+
+        // Rediriger vers le chat après l'analyse groupée
+        setTimeout(() => {
+          router.push("/dashboard/chat")
+        }, 1500)
+      },
+      selectedFolderData.length * 1500 + 1000,
+    )
   }
 
   const handleBulkDelete = () => {
@@ -732,6 +850,7 @@ export default function FoldersPage() {
         canDelete: true,
         canInvite: true,
         canArchive: true,
+        canAnalyze: true,
       },
     }
     setFolders((prev) => [...prev, newFolder])
@@ -1178,6 +1297,10 @@ export default function FoldersPage() {
                   <CloudUpload className="h-4 w-4 mr-2" />
                   Archiver
                 </Button>
+                <Button variant="outline" size="sm" onClick={handleBulkAIAnalysis}>
+                  <Brain className="h-4 w-4 mr-2" />
+                  Analyse IA
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1303,6 +1426,11 @@ export default function FoldersPage() {
                               <CloudUpload className="h-4 w-4" />
                             </Button>
                           )}
+                          {folder.permissions.canAnalyze && (
+                            <Button variant="ghost" size="sm" onClick={() => handleAIAnalysis(folder)}>
+                              <Brain className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1405,6 +1533,11 @@ export default function FoldersPage() {
                         {folder.permissions.canArchive && (
                           <Button variant="ghost" size="sm" onClick={() => handleArchiveFolder(folder)}>
                             <CloudUpload className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {folder.permissions.canAnalyze && (
+                          <Button variant="ghost" size="sm" onClick={() => handleAIAnalysis(folder)}>
+                            <Brain className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
