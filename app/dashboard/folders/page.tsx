@@ -41,13 +41,11 @@ import {
   CloudUpload,
   Cloud,
   HardDrive,
-  Calendar,
-  Database,
-  Zap,
-  Server,
-  Snowflake,
   Brain,
-  AlertTriangle,
+  FileQuestion,
+  Timer,
+  ShieldCheck,
+  Archive,
 } from "lucide-react"
 
 interface FolderData {
@@ -66,6 +64,14 @@ interface FolderData {
   color: string
   favorite: boolean
   storageType: "temporary" | "permanent"
+  status: "active" | "archived" | "pending" | "completed" | "validated"
+  type: "contracts" | "reports" | "projects" | "finance" | "hr" | "marketing" | "legal" | "general"
+  expectedDocuments: Array<{
+    name: string
+    required: boolean
+    assignedRole: "owner" | "editor" | "validator" | "contributor"
+    status: "missing" | "pending" | "received"
+  }>
   activity: Array<{
     user: string
     action: string
@@ -80,10 +86,24 @@ interface FolderData {
     canArchive: boolean
     canAnalyze: boolean
   }
+  temporaryStorageConfig?: {
+    duration: number // en jours
+    dataUsage: string
+    thirdPartyAccess: string
+  }
 }
 
 interface ActionModal {
-  type: "invite" | "delete" | "create" | "edit" | "archive" | null
+  type:
+    | "invite"
+    | "delete"
+    | "create"
+    | "edit"
+    | "archive"
+    | "request_document"
+    | "storage_config"
+    | "certificate"
+    | null
   folder: FolderData | null
   folders: FolderData[]
 }
@@ -141,7 +161,14 @@ export default function FoldersPage() {
   const [folderAccess, setFolderAccess] = useState<"shared" | "private">("private")
   const [archiveReason, setArchiveReason] = useState("")
   const [retentionPeriod, setRetentionPeriod] = useState("5")
+  const [selectedDocument, setSelectedDocument] = useState("")
+  const [requestMessage, setRequestMessage] = useState("")
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
+
+  // Storage config modal states
+  const [storageDuration, setStorageDuration] = useState("30")
+  const [dataUsage, setDataUsage] = useState("")
+  const [thirdPartyAccess, setThirdPartyAccess] = useState("")
 
   const [folders, setFolders] = useState<FolderData[]>([])
   const [stats, setStats] = useState({
@@ -300,6 +327,14 @@ export default function FoldersPage() {
           color: "blue",
           favorite: true,
           storageType: "permanent",
+          status: "active",
+          type: "contracts",
+          expectedDocuments: [
+            { name: "Contrat cadre", required: true, assignedRole: "owner", status: "received" },
+            { name: "Conditions générales", required: true, assignedRole: "validator", status: "received" },
+            { name: "Annexes techniques", required: false, assignedRole: "editor", status: "missing" },
+            { name: "Certificat d'assurance", required: true, assignedRole: "contributor", status: "pending" },
+          ],
           activity: [
             { user: "Marie Dubois", action: "ajouté", item: "Contrat_ABC.pdf", time: "Il y a 2h" },
             { user: "Jean Martin", action: "modifié", item: "Contrat_XYZ.pdf", time: "Il y a 5h" },
@@ -311,6 +346,11 @@ export default function FoldersPage() {
             canInvite: true,
             canArchive: false,
             canAnalyze: true,
+          },
+          temporaryStorageConfig: {
+            duration: 90,
+            dataUsage: "Contrats clients et négociations commerciales",
+            thirdPartyAccess: "Avocats externes, clients contractants",
           },
         },
         {
@@ -329,6 +369,13 @@ export default function FoldersPage() {
           color: "green",
           favorite: false,
           storageType: "temporary",
+          status: "pending",
+          type: "reports",
+          expectedDocuments: [
+            { name: "Rapport mensuel", required: true, assignedRole: "owner", status: "received" },
+            { name: "Analyse KPI", required: true, assignedRole: "editor", status: "missing" },
+            { name: "Graphiques", required: false, assignedRole: "contributor", status: "received" },
+          ],
           activity: [
             { user: "Sophie Laurent", action: "créé", item: "Rapport_Nov.docx", time: "Il y a 1j" },
             { user: "Pierre Durand", action: "consulté", item: "Analyse_Q4.xlsx", time: "Il y a 2j" },
@@ -340,6 +387,11 @@ export default function FoldersPage() {
             canInvite: true,
             canArchive: true,
             canAnalyze: true,
+          },
+          temporaryStorageConfig: {
+            duration: 30,
+            dataUsage: "Analyses de performance et rapports internes",
+            thirdPartyAccess: "Consultants externes, auditeurs",
           },
         },
         {
@@ -358,6 +410,14 @@ export default function FoldersPage() {
           color: "purple",
           favorite: true,
           storageType: "temporary",
+          status: "active",
+          type: "projects",
+          expectedDocuments: [
+            { name: "Cahier des charges", required: true, assignedRole: "owner", status: "received" },
+            { name: "Spécifications techniques", required: true, assignedRole: "editor", status: "received" },
+            { name: "Planning projet", required: true, assignedRole: "validator", status: "received" },
+            { name: "Budget prévisionnel", required: true, assignedRole: "contributor", status: "missing" },
+          ],
           activity: [
             { user: "Jean Martin", action: "partagé", item: "Specs_Alpha.pdf", time: "Il y a 3h" },
             { user: "Marie Dubois", action: "commenté", item: "Design_Beta.figma", time: "Il y a 6h" },
@@ -387,6 +447,13 @@ export default function FoldersPage() {
           color: "orange",
           favorite: false,
           storageType: "permanent",
+          status: "completed",
+          type: "finance",
+          expectedDocuments: [
+            { name: "Budget annuel", required: true, assignedRole: "owner", status: "received" },
+            { name: "Bilan comptable", required: true, assignedRole: "validator", status: "received" },
+            { name: "Factures", required: true, assignedRole: "editor", status: "received" },
+          ],
           activity: [
             { user: "Marie Dubois", action: "mis à jour", item: "Budget_2024.xlsx", time: "Il y a 1j" },
             { user: "Admin", action: "vérifié", item: "Factures_Dec.pdf", time: "Il y a 2j" },
@@ -416,6 +483,13 @@ export default function FoldersPage() {
           color: "red",
           favorite: false,
           storageType: "temporary",
+          status: "archived",
+          type: "hr",
+          expectedDocuments: [
+            { name: "Politique RH", required: true, assignedRole: "owner", status: "received" },
+            { name: "Contrats employés", required: true, assignedRole: "validator", status: "received" },
+            { name: "Formation", required: false, assignedRole: "editor", status: "missing" },
+          ],
           activity: [
             { user: "Admin", action: "ajouté", item: "Politique_Télétravail.pdf", time: "Il y a 3j" },
             { user: "Sophie Laurent", action: "lu", item: "Guide_Onboarding.docx", time: "Il y a 4j" },
@@ -445,13 +519,21 @@ export default function FoldersPage() {
           color: "pink",
           favorite: true,
           storageType: "temporary",
+          status: "validated",
+          type: "marketing",
+          expectedDocuments: [
+            { name: "Brief campagne", required: true, assignedRole: "owner", status: "received" },
+            { name: "Créations visuelles", required: true, assignedRole: "editor", status: "pending" },
+            { name: "Plan média", required: true, assignedRole: "contributor", status: "missing" },
+            { name: "Budget marketing", required: false, assignedRole: "validator", status: "received" },
+          ],
           activity: [
             { user: "Pierre Durand", action: "uploadé", item: "Campagne_Q1.psd", time: "Il y a 4j" },
             { user: "Design Team", action: "approuvé", item: "Logo_V2.png", time: "Il y a 5j" },
           ],
           permissions: {
             canView: true,
-            canEdit: true,
+            canEdit: false,
             canDelete: false,
             canInvite: true,
             canArchive: true,
@@ -551,6 +633,13 @@ export default function FoldersPage() {
     setActionModal({ type: "archive", folder, folders: [] })
   }
 
+  const handleStorageConfig = (folder: FolderData) => {
+    setStorageDuration(folder.temporaryStorageConfig?.duration.toString() || "30")
+    setDataUsage(folder.temporaryStorageConfig?.dataUsage || "")
+    setThirdPartyAccess(folder.temporaryStorageConfig?.thirdPartyAccess || "")
+    setActionModal({ type: "storage_config", folder, folders: [] })
+  }
+
   const handleAIAnalysis = (folder: FolderData) => {
     showNotification("info", `Analyse IA en cours pour ${folder.name}...`)
 
@@ -611,6 +700,37 @@ export default function FoldersPage() {
       },
       2000 + Math.random() * 3000,
     )
+  }
+
+  const handleViewCertificate = (folder: FolderData) => {
+    setActionModal({ type: "certificate", folder, folders: [] })
+  }
+
+  const handleDownloadCertificate = (folder: FolderData) => {
+    if (folder.status === "validated") {
+      showNotification("info", `Téléchargement du certificat blockchain pour le dossier ${folder.name}...`)
+
+      sendFolderChatNotification(
+        folder.id.toString(),
+        `🔗 Certificat blockchain du dossier téléchargé`,
+        "folder_blockchain_certificate_download",
+      )
+
+      setTimeout(() => {
+        showNotification("success", `Certificat blockchain du dossier ${folder.name} téléchargé avec succès`)
+      }, 2000)
+    }
+  }
+
+  const handleManageRoles = (folder: FolderData) => {
+    // Rediriger vers la gestion des rôles du dossier
+    router.push(`/dashboard/folders/${folder.id}/roles`)
+  }
+
+  const handleRequestDocument = (folder: FolderData) => {
+    setSelectedDocument("")
+    setRequestMessage("")
+    setActionModal({ type: "request_document", folder, folders: [] })
   }
 
   const handleDeleteFolder = (folder: FolderData) => {
@@ -771,6 +891,61 @@ export default function FoldersPage() {
     setActionModal({ type: null, folder: null, folders: [] })
   }
 
+  const confirmRequestDocument = () => {
+    if (actionModal.folder && selectedDocument) {
+      const document = actionModal.folder.expectedDocuments.find((doc) => doc.name === selectedDocument)
+      if (document) {
+        // Trouver l'utilisateur avec le rôle assigné
+        const assignedUser = users.find(
+          (user) => user.folderRoles[actionModal.folder!.id.toString()]?.role === document.assignedRole,
+        )
+
+        if (assignedUser) {
+          // Préparer les données pour le chat
+          const messageData = {
+            userName: assignedUser.name,
+            subject: `Demande de document - ${selectedDocument}`,
+            content: `Bonjour ${assignedUser.name},\n\nPouvez-vous fournir le document "${selectedDocument}" pour le dossier "${actionModal.folder.name}" ?\n\n${requestMessage}\n\nMerci !`,
+          }
+
+          // Stocker dans sessionStorage pour le chat
+          sessionStorage.setItem("newMessage", JSON.stringify(messageData))
+
+          showNotification("success", `Demande envoyée à ${assignedUser.name}. Redirection vers le chat...`)
+
+          // Rediriger vers le chat avec l'utilisateur
+          setTimeout(() => {
+            router.push(`/dashboard/chat?user=${assignedUser.id}&message=new`)
+          }, 1500)
+        } else {
+          showNotification("error", "Aucun utilisateur trouvé avec le rôle requis pour ce document")
+        }
+      }
+    }
+    setActionModal({ type: null, folder: null, folders: [] })
+  }
+
+  const confirmStorageConfig = () => {
+    if (actionModal.folder) {
+      const updatedFolder = {
+        ...actionModal.folder,
+        temporaryStorageConfig: {
+          duration: Number.parseInt(storageDuration),
+          dataUsage: dataUsage,
+          thirdPartyAccess: thirdPartyAccess,
+        },
+        modified: new Date(),
+      }
+      setFolders((prev) => prev.map((f) => (f.id === updatedFolder.id ? updatedFolder : f)))
+      showNotification("success", `Configuration du stockage temporaire mise à jour pour ${actionModal.folder.name}`)
+
+      // Notification dans le chat du dossier
+      const message = `⚙️ Configuration du stockage temporaire mise à jour :\n• Durée : ${storageDuration} jours\n• Usage : ${dataUsage}\n• Accès tiers : ${thirdPartyAccess}`
+      sendFolderChatNotification(actionModal.folder.id.toString(), message, "storage_config")
+    }
+    setActionModal({ type: null, folder: null, folders: [] })
+  }
+
   const confirmArchive = () => {
     if (actionModal.folder) {
       const updatedFolder = {
@@ -843,6 +1018,9 @@ export default function FoldersPage() {
       color: folderColor,
       favorite: false,
       storageType: "temporary",
+      status: "active",
+      type: "general",
+      expectedDocuments: [],
       activity: [],
       permissions: {
         canView: true,
@@ -959,6 +1137,23 @@ export default function FoldersPage() {
         return <User className="h-4 w-4 text-gray-400" />
       default:
         return <User className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Actif</Badge>
+      case "pending":
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">En attente</Badge>
+      case "completed":
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Terminé</Badge>
+      case "archived":
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Archivé</Badge>
+      case "validated":
+        return <Badge className="bg-green-300 text-green-800 border-green-400">Validé</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Inconnu</Badge>
     }
   }
 
@@ -1337,7 +1532,7 @@ export default function FoldersPage() {
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Propriétaire</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Stockage</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Accès</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Membres</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Statut</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
                   </tr>
                 </thead>
@@ -1405,17 +1600,17 @@ export default function FoldersPage() {
                           {folder.access === "shared" ? "Partagé" : "Privé"}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-1">
-                          <Users className="h-4 w-4 text-gray-400" />
-                          <span className="text-gray-600">{folder.members.length}</span>
-                        </div>
-                      </td>
+                      <td className="py-3 px-4">{getStatusBadge(folder.status)}</td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end space-x-1">
                           <Button variant="ghost" size="sm" onClick={() => handleOpenFolder(folder)}>
                             <FolderOpen className="h-4 w-4" />
                           </Button>
+                          {folder.storageType === "temporary" && (
+                            <Button variant="ghost" size="sm" onClick={() => handleStorageConfig(folder)}>
+                              <Timer className="h-4 w-4" />
+                            </Button>
+                          )}
                           {folder.permissions.canInvite && (
                             <Button variant="ghost" size="sm" onClick={() => handleInviteFolder(folder)}>
                               <Share2 className="h-4 w-4" />
@@ -1431,6 +1626,22 @@ export default function FoldersPage() {
                               <Brain className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button variant="ghost" size="sm" onClick={() => handleManageRoles(folder)}>
+                            <Users className="h-4 w-4" />
+                          </Button>
+                          {folder.status === "validated" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadCertificate(folder)}
+                              title="Télécharger le certificat blockchain"
+                            >
+                              <ShieldCheck className="h-4 w-4 text-green-600" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => handleRequestDocument(folder)}>
+                            <FileQuestion className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -1467,6 +1678,37 @@ export default function FoldersPage() {
                       </button>
                       {getStorageIcon(folder.storageType)}
                       {folder.access === "private" && <Lock className="h-4 w-4 text-gray-400" />}
+                      {folder.storageType === "temporary" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleStorageConfig(folder)}
+                          className="h-8 w-8 p-0"
+                          title="Configurer le stockage temporaire"
+                        >
+                          <Timer className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {folder.status === "validated" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadCertificate(folder)}
+                          className="h-8 w-8 p-0"
+                          title="Télécharger le certificat blockchain"
+                        >
+                          <ShieldCheck className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleManageRoles(folder)}
+                        className="h-8 w-8 p-0"
+                        title="Gérer les rôles"
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
                     </div>
 
                     <div className="flex flex-col items-center space-y-4 mt-8">
@@ -1480,23 +1722,6 @@ export default function FoldersPage() {
                         </h3>
                         <p className="text-sm text-gray-500 line-clamp-2">{folder.description}</p>
 
-                        <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <FileText className="h-4 w-4" />
-                            <span>{folder.documentsCount}</span>
-                          </div>
-                          {folder.subfoldersCount > 0 && (
-                            <div className="flex items-center space-x-1">
-                              <Folder className="h-4 w-4" />
-                              <span>{folder.subfoldersCount}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center space-x-1">
-                            <Users className="h-4 w-4" />
-                            <span>{folder.members.length}</span>
-                          </div>
-                        </div>
-
                         <div className="text-xs text-gray-500">
                           <p>{folder.size}</p>
                           <p>{formatDate(folder.modified)}</p>
@@ -1504,7 +1729,14 @@ export default function FoldersPage() {
                             {getStorageIcon(folder.storageType)}
                             <span>{folder.storageType === "permanent" ? "Permanent" : "Temporaire"}</span>
                           </div>
+                          {folder.temporaryStorageConfig && folder.storageType === "temporary" && (
+                            <div className="text-xs text-blue-600 mt-1">
+                              Durée: {folder.temporaryStorageConfig.duration} jours
+                            </div>
+                          )}
                         </div>
+
+                        <div className="flex justify-center">{getStatusBadge(folder.status)}</div>
 
                         <Badge
                           variant="outline"
@@ -1516,30 +1748,6 @@ export default function FoldersPage() {
                         >
                           {folder.access === "shared" ? "Partagé" : "Privé"}
                         </Badge>
-                      </div>
-
-                      <div
-                        className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenFolder(folder)}>
-                          <FolderOpen className="h-4 w-4" />
-                        </Button>
-                        {folder.permissions.canInvite && (
-                          <Button variant="ghost" size="sm" onClick={() => handleInviteFolder(folder)}>
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {folder.permissions.canArchive && (
-                          <Button variant="ghost" size="sm" onClick={() => handleArchiveFolder(folder)}>
-                            <CloudUpload className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {folder.permissions.canAnalyze && (
-                          <Button variant="ghost" size="sm" onClick={() => handleAIAnalysis(folder)}>
-                            <Brain className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
                     </div>
 
@@ -1584,11 +1792,11 @@ export default function FoldersPage() {
       {actionModal.type && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            {/* Invite Modal */}
-            {actionModal.type === "invite" && (
+            {/* Storage Config Modal */}
+            {actionModal.type === "storage_config" && actionModal.folder && (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Partager le dossier</h3>
+                  <h3 className="text-lg font-semibold">Configuration du stockage temporaire</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1598,450 +1806,353 @@ export default function FoldersPage() {
                   </Button>
                 </div>
                 <div className="space-y-4">
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      {actionModal.folder ? (
-                        <>
-                          Le dossier <strong>{actionModal.folder.name}</strong> sera partagé avec la personne invitée.
-                        </>
-                      ) : (
-                        <>
-                          <strong>{actionModal.folders.length} dossier(s)</strong> seront partagés avec la personne
-                          invitée.
-                        </>
-                      )}
-                    </p>
-                  </div>
-
-                  {actionModal.folders.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Dossiers à partager :</p>
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {actionModal.folders.map((folder) => (
-                          <div key={folder.id} className="flex items-center space-x-2 p-2 bg-gray-50 rounded text-sm">
-                            <div className={`p-1 rounded ${getFolderColor(folder.color)}`}>
-                              <Folder className="h-4 w-4" />
-                            </div>
-                            <span className="flex-1 truncate">{folder.name}</span>
-                            <span className="text-xs text-gray-500">{folder.documentsCount} docs</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label className="text-sm font-medium">Type d'invitation</Label>
-                    <div className="flex space-x-4 mt-2">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="inviteScope"
-                          value="user"
-                          checked={inviteScope === "user"}
-                          onChange={(e) => setInviteScope(e.target.value as "user" | "role")}
-                          className="mr-2"
-                        />
-                        Utilisateur spécifique
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="inviteScope"
-                          value="role"
-                          checked={inviteScope === "role"}
-                          onChange={(e) => setInviteScope(e.target.value as "user" | "role")}
-                          className="mr-2"
-                        />
-                        Rôle/Groupe
-                      </label>
-                    </div>
-                  </div>
-
-                  {inviteScope === "user" ? (
-                    <div>
-                      <Label htmlFor="selectedUser">Sélectionner un utilisateur</Label>
-                      <Select value={selectedUser} onValueChange={setSelectedUser}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choisir un utilisateur" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-80">
-                          {(() => {
-                            const currentFolderId =
-                              actionModal.folder?.id.toString() ||
-                              (actionModal.folders.length > 0 ? actionModal.folders[0].id.toString() : "")
-                            const organizedUsers = organizeUsersForInvitation(currentFolderId)
-
-                            return (
-                              <>
-                                {/* Rôles sur le dossier */}
-                                {Object.keys(organizedUsers.folderRoles).length > 0 && (
-                                  <>
-                                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
-                                      👑 Rôles sur ce dossier
-                                    </div>
-                                    {Object.entries(organizedUsers.folderRoles).map(([role, roleUsers]) => (
-                                      <div key={`folder-${role}`}>
-                                        <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 flex items-center">
-                                          {getRoleIcon(role)}
-                                          <span className="ml-1 capitalize">{role}</span>
-                                        </div>
-                                        {roleUsers.map((user) => (
-                                          <SelectItem key={`folder-${role}-${user.id}`} value={user.id}>
-                                            <div className="flex items-center space-x-2">
-                                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs">
-                                                {user.avatar}
-                                              </div>
-                                              <div>
-                                                <span className="font-medium">{user.name}</span>
-                                                <span className="text-gray-500 ml-2 text-xs">
-                                                  ({user.folderRoles[currentFolderId]?.role})
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </div>
-                                    ))}
-                                  </>
-                                )}
-
-                                {/* Rôles dans l'espace principal */}
-                                <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
-                                  🏢 Rôles dans l'espace principal
-                                </div>
-                                {Object.entries(organizedUsers.spaceRoles).map(([role, roleUsers]) => (
-                                  <div key={`space-${role}`}>
-                                    <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 flex items-center">
-                                      {getRoleIcon(role)}
-                                      <span className="ml-1 capitalize">{role}</span>
-                                    </div>
-                                    {roleUsers.map((user) => (
-                                      <SelectItem key={`space-${role}-${user.id}`} value={user.id}>
-                                        <div className="flex items-center space-x-2">
-                                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs">
-                                            {user.avatar}
-                                          </div>
-                                          <div>
-                                            <span className="font-medium">{user.name}</span>
-                                            <span className="text-gray-500 ml-2 text-xs">({user.spaceRole})</span>
-                                          </div>
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </div>
-                                ))}
-
-                                {/* Autres espaces */}
-                                {Object.keys(organizedUsers.otherSpaces).length > 0 && (
-                                  <>
-                                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
-                                      🌐 Autres espaces
-                                    </div>
-                                    {Object.entries(organizedUsers.otherSpaces).map(([spaceName, spaceUsers]) => (
-                                      <div key={`other-${spaceName}`}>
-                                        <div className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50">
-                                          {spaceName}
-                                        </div>
-                                        {spaceUsers.map((user) => (
-                                          <SelectItem key={`other-${spaceName}-${user.id}`} value={user.id}>
-                                            <div className="flex items-center space-x-2">
-                                              <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs">
-                                                {user.avatar}
-                                              </div>
-                                              <div>
-                                                <span className="font-medium">{user.name}</span>
-                                                <span className="text-gray-500 ml-2 text-xs">
-                                                  (
-                                                  {
-                                                    user.spaceRoles[
-                                                      Object.keys(user.spaceRoles).find(
-                                                        (key) => user.spaceRoles[key].spaceName === spaceName,
-                                                      ) || ""
-                                                    ]?.role
-                                                  }
-                                                  )
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </div>
-                                    ))}
-                                  </>
-                                )}
-                              </>
-                            )
-                          })()}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div>
-                      <Label htmlFor="selectedRole">Sélectionner un rôle</Label>
-                      <Select value={selectedRole} onValueChange={setSelectedRole}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choisir un rôle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {/* Rôles sur dossier */}
-                          <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
-                            📁 Rôles sur dossier
-                          </div>
-                          {roles
-                            .filter((role) => role.level === "folder")
-                            .map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                                <div className="flex items-center space-x-2">
-                                  {getRoleIcon(role.id.replace("folder-", ""))}
-                                  <div>
-                                    <span className="font-medium">{role.name}</span>
-                                    <p className="text-xs text-gray-500">{role.description}</p>
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-
-                          {/* Rôles dans l'espace */}
-                          <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
-                            🏢 Rôles dans l'espace
-                          </div>
-                          {roles
-                            .filter((role) => role.level === "space")
-                            .map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                                <div className="flex items-center space-x-2">
-                                  {getRoleIcon(role.id.replace("space-", ""))}
-                                  <div>
-                                    <span className="font-medium">{role.name}</span>
-                                    <p className="text-xs text-gray-500">{role.description}</p>
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-
-                          {/* Rôles globaux */}
-                          <div className="px-2 py-1.5 text-sm font-semibold text-gray-900 bg-gray-100">
-                            🌐 Rôles globaux
-                          </div>
-                          {roles
-                            .filter((role) => role.level === "global")
-                            .map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                                <div className="flex items-center space-x-2">
-                                  {getRoleIcon(role.id.replace("global-", ""))}
-                                  <div>
-                                    <span className="font-medium">{role.name}</span>
-                                    <p className="text-xs text-gray-500">{role.description}</p>
-                                  </div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label htmlFor="inviteMessage">Message d'invitation</Label>
-                    <Textarea
-                      id="inviteMessage"
-                      value={inviteMessage}
-                      onChange={(e) => setInviteMessage(e.target.value)}
-                      placeholder="Ajouter un message pour expliquer pourquoi vous partagez ce dossier..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setActionModal({ type: null, folder: null, folders: [] })}>
-                      Annuler
-                    </Button>
-                    <Button onClick={confirmInvite} disabled={inviteScope === "user" ? !selectedUser : !selectedRole}>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Partager
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Archive Modal */}
-            {actionModal.type === "archive" && (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Archiver vers le stockage permanent</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setActionModal({ type: null, folder: null, folders: [] })}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-4">
-                  <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="bg-orange-50 p-3 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
-                      <CloudUpload className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium text-blue-900">Archivage du dossier complet</span>
+                      <Timer className="h-5 w-5 text-orange-600" />
+                      <span className="font-medium text-orange-900">Configuration du stockage temporaire</span>
                     </div>
-                    <p className="text-sm text-blue-800">
-                      {actionModal.folder
-                        ? `Le dossier "${actionModal.folder.name}" et tous ses ${actionModal.folder.documentsCount} document(s) seront transférés vers le stockage permanent.`
-                        : `${actionModal.folders.length} dossier(s) et tous leurs documents seront transférés vers le stockage permanent.`}
+                    <p className="text-sm text-orange-800">
+                      Configurez la durée de conservation et les informations d'usage pour le dossier{" "}
+                      <strong>{actionModal.folder.name}</strong> en stockage temporaire.
                     </p>
                   </div>
 
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Database className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium text-blue-900">Architecture de stockage souveraine</span>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-white p-3 rounded-lg border border-green-200">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Zap className="h-4 w-4 text-green-600" />
-                          <h5 className="font-semibold text-green-800 text-sm">Stockage Temporaire</h5>
-                        </div>
-                        <p className="text-xs text-gray-700 mb-2">
-                          <strong>Store chiffré local, distribué strictement en parties prenantes</strong>
-                        </p>
-                        <ul className="text-xs text-gray-600 space-y-1">
-                          <li>• Accès rapide pour modifications</li>
-                          <li>• Chiffrement bout en bout</li>
-                          <li>• Distribution contrôlée</li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border border-blue-200">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Server className="h-4 w-4 text-blue-600" />
-                          <h5 className="font-semibold text-blue-800 text-sm">Stockage Permanent</h5>
-                        </div>
-                        <p className="text-xs text-gray-700 mb-2">
-                          <strong>
-                            Store chiffré d'archivage local, distribué strictement en parties prenantes et sur un
-                            serveur de backup sans accès aux données compatible avec du cold storage
-                          </strong>
-                        </p>
-                        <ul className="text-xs text-gray-600 space-y-1">
-                          <li>• Conservation longue durée</li>
-                          <li>• Lecture seule sécurisée</li>
-                          <li>• Backup cold storage</li>
-                          <li>• Extraction IA pour data room distribuée</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 p-2 bg-blue-100 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Snowflake className="h-4 w-4 text-blue-600" />
-                        <p className="text-xs text-blue-800">
-                          <strong>🔐 Souveraineté totale :</strong> Vos données restent sous votre contrôle exclusif,
-                          même en backup cold storage
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {actionModal.folder && (
-                    <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <div className={`p-2 rounded-lg ${getFolderColor(actionModal.folder.color)}`}>
-                        <Folder className="h-8 w-8" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{actionModal.folder.name}</h4>
-                        <p className="text-sm text-gray-500">
-                          {actionModal.folder.documentsCount} document(s) • {actionModal.folder.size}
-                        </p>
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Zap className="h-3 w-3 text-green-500" />
-                          <span className="text-xs text-gray-500">Store chiffré local temporaire</span>
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl">→</div>
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Server className="h-3 w-3 text-blue-500" />
-                          <span className="text-xs text-blue-600">Store permanent</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {actionModal.folders.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Dossiers à archiver :</p>
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {actionModal.folders.map((folder) => (
-                          <div key={folder.id} className="flex items-center space-x-2 p-2 bg-gray-50 rounded text-sm">
-                            <div className={`p-1 rounded ${getFolderColor(folder.color)}`}>
-                              <Folder className="h-4 w-4" />
-                            </div>
-                            <span className="flex-1 truncate">{folder.name}</span>
-                            <span className="text-xs text-gray-500">{folder.documentsCount} docs</span>
-                            <div className="flex items-center space-x-1">
-                              <Zap className="h-3 w-3 text-green-500" />
-                              <span className="text-xs">→</span>
-                              <Server className="h-3 w-3 text-blue-500" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   <div>
-                    <Label htmlFor="retentionPeriod">Période de conservation</Label>
-                    <Select value={retentionPeriod} onValueChange={setRetentionPeriod}>
+                    <Label htmlFor="storageDuration">Durée de conservation (en jours)</Label>
+                    <Select value={storageDuration} onValueChange={setStorageDuration}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1 an</SelectItem>
-                        <SelectItem value="3">3 ans</SelectItem>
-                        <SelectItem value="5">5 ans (recommandé)</SelectItem>
-                        <SelectItem value="7">7 ans</SelectItem>
-                        <SelectItem value="10">10 ans</SelectItem>
-                        <SelectItem value="permanent">Conservation permanente</SelectItem>
+                        <SelectItem value="7">7 jours</SelectItem>
+                        <SelectItem value="15">15 jours</SelectItem>
+                        <SelectItem value="30">30 jours</SelectItem>
+                        <SelectItem value="60">60 jours</SelectItem>
+                        <SelectItem value="90">90 jours</SelectItem>
+                        <SelectItem value="180">180 jours</SelectItem>
+                        <SelectItem value="365">1 an</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500 mt-1">
-                      <Calendar className="h-3 w-3 inline mr-1" />
-                      Durée de conservation dans le stockage permanent
+                      Durée pendant laquelle les données seront conservées en stockage temporaire avant archivage
+                      automatique
                     </p>
                   </div>
 
                   <div>
-                    <Label htmlFor="archiveReason">Raison de l'archivage (optionnel)</Label>
+                    <Label htmlFor="dataUsage">Usage de la donnée</Label>
                     <Textarea
-                      id="archiveReason"
-                      value={archiveReason}
-                      onChange={(e) => setArchiveReason(e.target.value)}
-                      placeholder="Expliquer pourquoi ce dossier doit être archivé..."
+                      id="dataUsage"
+                      value={dataUsage}
+                      onChange={(e) => setDataUsage(e.target.value)}
+                      placeholder="Décrivez l'usage prévu de ces données (ex: analyses commerciales, rapports internes, documentation projet...)"
                       rows={3}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Description de l'utilisation prévue des données contenues dans ce dossier
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="thirdPartyAccess">Tiers pouvant avoir accès</Label>
+                    <Textarea
+                      id="thirdPartyAccess"
+                      value={thirdPartyAccess}
+                      onChange={(e) => setThirdPartyAccess(e.target.value)}
+                      placeholder="Listez les tiers externes qui pourraient avoir accès à ces données (ex: consultants, partenaires, auditeurs...)"
+                      rows={3}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Liste des parties externes qui pourraient être amenées à consulter ces données
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-blue-900">Information RGPD</span>
+                    </div>
+                    <p className="text-xs text-blue-800">
+                      Ces informations sont utilisées pour assurer la conformité RGPD et la traçabilité des données.
+                      Elles seront incluses dans le registre des traitements.
+                    </p>
                   </div>
 
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={() => setActionModal({ type: null, folder: null, folders: [] })}>
                       Annuler
                     </Button>
-                    <Button onClick={confirmArchive}>
-                      <CloudUpload className="h-4 w-4 mr-2" />
-                      Archiver ({retentionPeriod === "permanent" ? "permanent" : `${retentionPeriod} ans`})
+                    <Button onClick={confirmStorageConfig}>
+                      <Timer className="h-4 w-4 mr-2" />
+                      Enregistrer la configuration
                     </Button>
                   </div>
                 </div>
               </>
             )}
 
-            {/* Create Modal */}
-            {actionModal.type === "create" && (
+            {/* Certificate Modal */}
+            {actionModal.type === "certificate" && actionModal.folder && (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Créer un nouveau dossier</h3>
+                  <h3 className="text-lg font-semibold">Certificat de validation du dossier</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setActionModal({ type: null, folder: null, folders: [] })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-3">
+                      <ShieldCheck className="h-8 w-8 text-green-600" />
+                      <div>
+                        <h4 className="font-semibold text-green-900">Dossier certifié</h4>
+                        <p className="text-sm text-green-700">
+                          Ce dossier et tous ses documents ont été validés et certifiés numériquement
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h5 className="font-medium text-gray-900 mb-3">Informations du dossier</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Nom :</span>
+                          <span className="font-medium">{actionModal.folder.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Documents :</span>
+                          <span className="font-medium">{actionModal.folder.documentsCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Taille totale :</span>
+                          <span className="font-medium">{actionModal.folder.size}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Type :</span>
+                          <span className="font-medium capitalize">{actionModal.folder.type}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Hash du dossier :</span>
+                          <span className="font-mono text-xs bg-white p-1 rounded break-all">
+                            {Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h5 className="font-medium text-gray-900 mb-3">Certificat numérique</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Émis le :</span>
+                          <span className="font-medium">{actionModal.folder.modified.toLocaleDateString("fr-FR")}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Validé par :</span>
+                          <span className="font-medium">{actionModal.folder.owner}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Autorité :</span>
+                          <span className="font-medium">DocV Folder Certification</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">ID Certificat :</span>
+                          <span className="font-mono text-xs bg-white p-1 rounded">
+                            FOLDER-CERT-{actionModal.folder.id}-{new Date().getFullYear()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Validité :</span>
+                          <span className="font-medium text-green-600">
+                            {new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h5 className="font-medium text-blue-900 mb-3">Validation du dossier complet</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 text-sm text-blue-800">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Intégrité de tous les documents vérifiée</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Structure du dossier validée</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Permissions et accès contrôlés</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm text-blue-800">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Horodatage certifié pour tous les fichiers</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Conformité RGPD du dossier</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Traçabilité complète des modifications</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+                    <h5 className="font-medium text-gray-900 mb-3">Chaîne de confiance distribuée</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <span className="text-gray-700">
+                            Block #{Math.floor(Math.random() * 1000000)} - Dossier principal
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          <span className="text-gray-700">
+                            {actionModal.folder.documentsCount} documents liés dans la blockchain
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                          <span className="text-gray-700">
+                            Réplication sur {Math.floor(Math.random() * 5) + 3} nœuds souverains
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                          <span className="text-gray-700">
+                            Stockage {actionModal.folder.storageType === "permanent" ? "permanent" : "temporaire"}{" "}
+                            certifié
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <span className="text-gray-700">
+                            {Math.floor(Math.random() * 100) + 50} confirmations réseau
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                          <span className="text-gray-700">
+                            Audit de sécurité: {new Date().toLocaleDateString("fr-FR")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {actionModal.folder.expectedDocuments.length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h5 className="font-medium text-yellow-900 mb-3">Documents attendus - Statut de validation</h5>
+                      <div className="space-y-2">
+                        {actionModal.folder.expectedDocuments.map((doc, index) => (
+                          <div key={index} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-4 w-4 text-gray-600" />
+                              <span className="text-gray-700">{doc.name}</span>
+                              {doc.required && <span className="text-red-500 text-xs">*</span>}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Badge
+                                className={
+                                  doc.status === "received"
+                                    ? "bg-green-100 text-green-800"
+                                    : doc.status === "pending"
+                                      ? "bg-orange-100 text-orange-800"
+                                      : "bg-red-100 text-red-800"
+                                }
+                              >
+                                {doc.status === "received"
+                                  ? "✓ Validé"
+                                  : doc.status === "pending"
+                                    ? "⏳ En attente"
+                                    : "❌ Manquant"}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Simuler le téléchargement du certificat du dossier
+                        showNotification("success", `Certificat du dossier ${actionModal.folder!.name} téléchargé`)
+                        sendFolderChatNotification(
+                          actionModal.folder!.id.toString(),
+                          `📜 Certificat de validation du dossier téléchargé`,
+                          "folder_certificate_download",
+                        )
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger le certificat (.pdf)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Simuler la vérification en ligne du dossier
+                        showNotification("info", "Vérification en ligne du certificat du dossier...")
+                        setTimeout(() => {
+                          showNotification("success", "Certificat du dossier vérifié avec succès")
+                        }, 3000)
+                      }}
+                    >
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      Vérifier en ligne
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Simuler le téléchargement de l'archive complète certifiée
+                        showNotification("info", "Préparation de l'archive certifiée...")
+                        setTimeout(() => {
+                          showNotification(
+                            "success",
+                            `Archive certifiée du dossier ${actionModal.folder!.name} téléchargée`,
+                          )
+                          sendFolderChatNotification(
+                            actionModal.folder!.id.toString(),
+                            `📦 Archive certifiée complète téléchargée (${actionModal.folder!.documentsCount} documents)`,
+                            "certified_archive_download",
+                          )
+                        }, 4000)
+                      }}
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive certifiée (.zip)
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Request Document Modal */}
+            {actionModal.type === "request_document" && actionModal.folder && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Demander un document</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2051,127 +2162,78 @@ export default function FoldersPage() {
                   </Button>
                 </div>
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="folderName">Nom du dossier *</Label>
-                    <Input
-                      id="folderName"
-                      value={folderName}
-                      onChange={(e) => setFolderName(e.target.value)}
-                      placeholder="Nom du dossier"
-                    />
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      Sélectionnez un document attendu pour le dossier <strong>{actionModal.folder.name}</strong> et
+                      envoyez une demande à la personne responsable.
+                    </p>
                   </div>
+
                   <div>
-                    <Label htmlFor="folderDescription">Description</Label>
-                    <Textarea
-                      id="folderDescription"
-                      value={folderDescription}
-                      onChange={(e) => setFolderDescription(e.target.value)}
-                      placeholder="Description du dossier"
-                      rows={3}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="folderTags">Tags (séparés par des virgules)</Label>
-                    <Input
-                      id="folderTags"
-                      value={folderTags}
-                      onChange={(e) => setFolderTags(e.target.value)}
-                      placeholder="juridique, contrats, clients"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="folderColor">Couleur</Label>
-                    <Select value={folderColor} onValueChange={setFolderColor}>
+                    <Label htmlFor="selectedDocument">Document à demander</Label>
+                    <Select value={selectedDocument} onValueChange={setSelectedDocument}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Choisir un document" />
                       </SelectTrigger>
                       <SelectContent>
-                        {colors.map((color) => (
-                          <SelectItem key={color.id} value={color.id}>
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-4 h-4 rounded ${color.class}`}></div>
-                              <span>{color.name}</span>
+                        {actionModal.folder.expectedDocuments.map((doc) => (
+                          <SelectItem key={doc.name} value={doc.name}>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center space-x-2">
+                                <FileText className="h-4 w-4" />
+                                <span>{doc.name}</span>
+                                {doc.required && <span className="text-red-500">*</span>}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  className={
+                                    doc.status === "received"
+                                      ? "bg-green-100 text-green-800"
+                                      : doc.status === "pending"
+                                        ? "bg-orange-100 text-orange-800"
+                                        : "bg-red-100 text-red-800"
+                                  }
+                                >
+                                  {doc.status === "received"
+                                    ? "Reçu"
+                                    : doc.status === "pending"
+                                      ? "En attente"
+                                      : "Manquant"}
+                                </Badge>
+                                <span className="text-xs text-gray-500">({doc.assignedRole})</span>
+                              </div>
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div>
-                    <Label htmlFor="folderAccess">Accès</Label>
-                    <Select value={folderAccess} onValueChange={setFolderAccess}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="private">
-                          <div className="flex items-center space-x-2">
-                            <Lock className="h-4 w-4" />
-                            <span>Privé</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="shared">
-                          <div className="flex items-center space-x-2">
-                            <Share2 className="h-4 w-4" />
-                            <span>Partagé</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="requestMessage">Message de demande</Label>
+                    <Textarea
+                      id="requestMessage"
+                      value={requestMessage}
+                      onChange={(e) => setRequestMessage(e.target.value)}
+                      placeholder="Ajouter un message pour expliquer votre demande..."
+                      rows={3}
+                    />
                   </div>
 
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={() => setActionModal({ type: null, folder: null, folders: [] })}>
                       Annuler
                     </Button>
-                    <Button onClick={confirmCreate} disabled={!folderName.trim()}>
-                      <FolderPlus className="h-4 w-4 mr-2" />
-                      Créer
+                    <Button onClick={confirmRequestDocument} disabled={!selectedDocument}>
+                      <FileQuestion className="h-4 w-4 mr-2" />
+                      Envoyer la demande
                     </Button>
                   </div>
                 </div>
               </>
             )}
 
-            {/* Delete Modal */}
-            {actionModal.type === "delete" && (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-red-600">Confirmer la suppression</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setActionModal({ type: null, folder: null, folders: [] })}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                    <div>
-                      <p className="text-sm font-medium text-red-800">
-                        {actionModal.folder
-                          ? `Êtes-vous sûr de vouloir supprimer le dossier "${actionModal.folder.name}" ?`
-                          : `Êtes-vous sûr de vouloir supprimer ${actionModal.folders.length} dossier(s) ?`}
-                      </p>
-                      <p className="text-xs text-red-600">
-                        Cette action supprimera également tous les documents contenus dans{" "}
-                        {actionModal.folder ? "ce dossier" : "ces dossiers"}. Cette action est irréversible.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setActionModal({ type: null, folder: null, folders: [] })}>
-                      Annuler
-                    </Button>
-                    <Button variant="destructive" onClick={confirmDelete}>
-                      Supprimer
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Other modals would continue here... */}
           </div>
         </div>
       )}

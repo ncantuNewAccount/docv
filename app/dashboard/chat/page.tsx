@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,11 +29,68 @@ import {
   BarChart3,
   Zap,
 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 
 export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState("1")
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+
+  const searchParams = useSearchParams()
+  const userId = searchParams.get("user")
+  const messageType = searchParams.get("message")
+  const groupType = searchParams.get("type")
+
+  useEffect(() => {
+    // Gérer les nouveaux messages depuis les autres pages
+    if (messageType === "new") {
+      if (userId) {
+        // Message individuel
+        const messageData = sessionStorage.getItem("newMessage")
+        if (messageData) {
+          const data = JSON.parse(messageData)
+          console.log("Nouveau message individuel:", data)
+
+          // Créer ou ouvrir la conversation avec cet utilisateur
+          setSelectedConversation(userId)
+
+          // Ajouter le message pré-rempli
+          setNewMessage(`${data.subject ? `[${data.subject}] ` : ""}${data.content}`)
+
+          // Nettoyer le sessionStorage
+          sessionStorage.removeItem("newMessage")
+
+          // Notification
+          showNotification("info", `Conversation ouverte avec ${data.userName}`)
+        }
+      } else if (groupType === "group") {
+        // Message de groupe
+        const groupData = sessionStorage.getItem("newGroupMessage")
+        if (groupData) {
+          const data = JSON.parse(groupData)
+          console.log("Nouveau message de groupe:", data)
+
+          // Créer une nouvelle conversation de groupe
+          const groupName = `Groupe (${data.users.length} membres)`
+          setSelectedConversation("group-new")
+
+          // Ajouter le message pré-rempli
+          setNewMessage(`${data.subject ? `[${data.subject}] ` : ""}${data.content}`)
+
+          // Nettoyer le sessionStorage
+          sessionStorage.removeItem("newGroupMessage")
+
+          // Notification
+          showNotification("info", `Conversation de groupe créée avec ${data.users.length} utilisateur(s)`)
+        }
+      }
+    }
+  }, [userId, messageType, groupType])
+
+  const showNotification = (type: "success" | "error" | "info", message: string) => {
+    // Implémenter la notification (peut utiliser toast ou état local)
+    console.log(`${type.toUpperCase()}: ${message}`)
+  }
 
   const conversations = [
     {
