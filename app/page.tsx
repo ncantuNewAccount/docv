@@ -379,7 +379,7 @@ export default function HomePage() {
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                       <Zap className="h-8 w-8 mx-auto text-green-600 mb-2" />
                       <h4 className="font-semibold text-green-800">Stockage temporaire</h4>
-                      <p className="text-2xl font-bold text-green-600">100 Mo</p>
+                      <p className="text-2xl font-bold text-green-600">100 Go</p>
                       <p className="text-sm text-green-700">Traitement IA et OCR</p>
                     </div>
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -475,7 +475,7 @@ export default function HomePage() {
                       <p className="text-xs text-orange-600">Stockage permanent</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-orange-200">
-                      <p className="font-medium text-orange-800">+25 Mo</p>
+                      <p className="font-medium text-orange-800">+25 Go</p>
                       <p className="text-xs text-orange-600">Stockage temporaire</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-orange-200">

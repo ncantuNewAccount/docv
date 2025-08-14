@@ -145,7 +145,7 @@ interface Role {
 
 export default function FoldersPage() {
   const router = useRouter()
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [viewMode, setViewMode] = useState<'list'>('list')
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedFolders, setSelectedFolders] = useState<number[]>([])
   const [sortBy, setSortBy] = useState("modified")
@@ -1402,22 +1402,7 @@ export default function FoldersPage() {
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-1 border rounded-md">
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Vue grille supprimée: forcer la vue liste uniquement */}
             </div>
           </div>
 
@@ -1505,7 +1490,7 @@ export default function FoldersPage() {
         </CardContent>
       </Card>
 
-      {/* Bulk Actions */}
+      {/* Bulk Actions minimalistes: certificats et rôles uniquement */}
       {selectedFolders.length > 0 && (
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
@@ -1521,30 +1506,36 @@ export default function FoldersPage() {
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={handleBulkDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkInvite}>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Partager
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkArchive}>
-                  <CloudUpload className="h-4 w-4 mr-2" />
-                  Archiver
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkAIAnalysis}>
-                  <Brain className="h-4 w-4 mr-2" />
-                  Analyse IA
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const selected = folders.filter((f) => selectedFolders.includes(f.id))
+                    const withCerts = selected.filter((f) => f.documents && f.documents.some((d) => d.hasCertificate))
+                    if (withCerts.length === 0) {
+                      setNotification({ type: "info", message: "Aucun certificat à télécharger pour la sélection" })
+                      return
+                    }
+                    withCerts.forEach((f) => handleViewDocumentsCertificates(f))
+                  }}
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Télécharger certificats
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 bg-transparent"
+                  onClick={() => {
+                    const first = folders.find((f) => selectedFolders.includes(f.id))
+                    if (first) {
+                      handleManageRoles(first)
+                    } else {
+                      setNotification({ type: "info", message: "Sélectionnez au moins un dossier" })
+                    }
+                  }}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Supprimer
+                  <Users className="h-4 w-4 mr-2" />
+                  Configurer les rôles
                 </Button>
               </div>
             </div>
@@ -1571,7 +1562,7 @@ export default function FoldersPage() {
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Taille</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Modifié</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Propriétaire</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Stockage</th>
+
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Accès</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Statut</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
@@ -1594,6 +1585,7 @@ export default function FoldersPage() {
                           <div>
                             <div className="flex items-center space-x-2">
                               <span className="font-medium text-gray-900">{folder.name}</span>
+                              {getStorageIcon(folder.storageType)}
                               <button onClick={() => handleToggleFavorite(folder.id)}>
                                 <Star
                                   className={`h-4 w-4 ${folder.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
@@ -1622,12 +1614,7 @@ export default function FoldersPage() {
                       <td className="py-3 px-4 text-gray-600">{formatDate(folder.modified)}</td>
                       <td className="py-3 px-4 text-gray-600">{folder.owner}</td>
                       <td className="py-3 px-4">
-                        <div className="flex items-center space-x-1">
-                          {getStorageIcon(folder.storageType)}
-                          <span className="text-sm text-gray-600 capitalize">
-                            {folder.storageType === "permanent" ? "Permanent" : "Temporaire"}
-                          </span>
-                        </div>
+
                       </td>
                       <td className="py-3 px-4">
                         <Badge
@@ -1642,59 +1629,7 @@ export default function FoldersPage() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(folder.status)}</td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenFolder(folder)}>
-                            <FolderOpen className="h-4 w-4" />
-                          </Button>
-                          {folder.storageType === "temporary" && (
-                            <Button variant="ghost" size="sm" onClick={() => handleStorageConfig(folder)}>
-                              <Timer className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {folder.permissions.canInvite && (
-                            <Button variant="ghost" size="sm" onClick={() => handleInviteFolder(folder)}>
-                              <Share2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {folder.permissions.canArchive && (
-                            <Button variant="ghost" size="sm" onClick={() => handleArchiveFolder(folder)}>
-                              <CloudUpload className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {folder.permissions.canAnalyze && (
-                            <Button variant="ghost" size="sm" onClick={() => handleAIAnalysis(folder)}>
-                              <Brain className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => handleManageRoles(folder)}>
-                            <Users className="h-4 w-4" />
-                          </Button>
-                          {folder.status === "validated" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDownloadCertificate(folder)}
-                              title="Télécharger le certificat blockchain"
-                            >
-                              <ShieldCheck className="h-4 w-4 text-green-600" />
-                            </Button>
-                          )}
-                          {folder.documents && folder.documents.some((doc) => doc.hasCertificate) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDocumentsCertificates(folder)}
-                              title="Certificats des documents"
-                            >
-                              <FileCheck className="h-4 w-4 text-blue-600" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => handleRequestDocument(folder)}>
-                            <FileQuestion className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+
                     </tr>
                   ))}
                 </tbody>

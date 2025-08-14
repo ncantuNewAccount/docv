@@ -139,7 +139,7 @@ export default function DocumentsPage() {
   const router = useRouter()
   const folderFilter = searchParams.get("folder")
 
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list")
+  const [viewMode, setViewMode] = useState<'list'>('list')
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([])
   const [sortBy, setSortBy] = useState("modified")
@@ -1696,22 +1696,7 @@ export default function DocumentsPage() {
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-1 border rounded-md">
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Vue grille supprimée: forcer la vue liste uniquement */}
             </div>
           </div>
 
@@ -1827,7 +1812,7 @@ export default function DocumentsPage() {
         </CardContent>
       </Card>
 
-      {/* Bulk Actions */}
+      {/* Bulk Actions minimalistes: certificats et rôles uniquement */}
       {selectedDocuments.length > 0 && (
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
@@ -1843,34 +1828,35 @@ export default function DocumentsPage() {
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={handleBulkDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Récupérer
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkInvite}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Inviter
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkArchive}>
-                  <CloudUpload className="h-4 w-4 mr-2" />
-                  Archiver
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkMove}>
-                  <FolderOpen className="h-4 w-4 mr-2" />
-                  Déplacer
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkAIAnalysis}>
-                  <Brain className="h-4 w-4 mr-2" />
-                  Analyse IA
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const docsToDownload = documents.filter((d) => selectedDocuments.includes(d.id) && d.hasCertificate)
+                    if (docsToDownload.length === 0) {
+                      showNotification("info", "Aucun certificat à télécharger pour la sélection")
+                      return
+                    }
+                    docsToDownload.forEach((d) => handleDownloadCertificate(d))
+                  }}
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Télécharger certificats
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 bg-transparent"
+                  onClick={() => {
+                    const first = documents.find((d) => selectedDocuments.includes(d.id))
+                    if (first) {
+                      handleManageDocumentRoles(first)
+                    } else {
+                      showNotification("info", "Sélectionnez au moins un document")
+                    }
+                  }}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Supprimer
+                  <Users className="h-4 w-4 mr-2" />
+                  Configurer les rôles
                 </Button>
               </div>
             </div>
@@ -1893,12 +1879,11 @@ export default function DocumentsPage() {
                       />
                     </th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Nom</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Type</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Taille</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Modifié</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Auteur</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Dossier</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Stockage</th>
+
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Statut</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
                   </tr>
@@ -1917,6 +1902,7 @@ export default function DocumentsPage() {
                           {getFileIcon(doc.type)}
                           <div className="flex items-center space-x-2">
                             <span className="font-medium text-gray-900">{doc.name}</span>
+                            {getStorageIcon(doc.storageType)}
                             <button onClick={() => handleToggleFavorite(doc.id)}>
                               <Star
                                 className={`h-4 w-4 ${doc.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
@@ -1932,55 +1918,13 @@ export default function DocumentsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-gray-600">{doc.type}</td>
                       <td className="py-3 px-4 text-gray-600">{doc.size}</td>
                       <td className="py-3 px-4 text-gray-600">{formatDate(doc.modified)}</td>
                       <td className="py-3 px-4 text-gray-600">{doc.author}</td>
                       <td className="py-3 px-4 text-gray-600">{doc.folder}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center space-x-1">
-                          {getStorageIcon(doc.storageType)}
-                          <span className="text-sm text-gray-600 capitalize">
-                            {doc.storageType === "permanent" ? "Permanent" : "Temporaire"}
-                          </span>
-                          {doc.storageType === "temporary" && doc.temporaryStorageConfig && (
-                            <span className="text-xs text-orange-600">({doc.temporaryStorageConfig.duration}j)</span>
-                          )}
-                        </div>
-                      </td>
+
                       <td className="py-3 px-4">{getStatusBadge(doc.status, doc.isValidated)}</td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          {doc.storageType === "temporary" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleConfigureStorage(doc)}
-                              title="Configurer le stockage temporaire"
-                            >
-                              <Settings className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleManageDocumentRoles(doc)}
-                            title="Gérer les rôles du document"
-                          >
-                            <Users className="h-4 w-4" />
-                          </Button>
-                          {doc.hasCertificate && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDownloadCertificate(doc)}
-                              title="Télécharger le certificat blockchain"
-                            >
-                              <ShieldCheck className="h-4 w-4 text-green-600" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
+
                     </tr>
                   ))}
                 </tbody>

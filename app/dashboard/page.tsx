@@ -42,7 +42,7 @@ export default function DashboardPage() {
     permanentStorage: 0,
     permanentStorageLimit: 1000, // 1 To en Go
     temporaryStorage: 0,
-    temporaryStorageLimit: 100, // 100 Mo
+    temporaryStorageLimit: 100, // 100 Go
     newFoldersThisMonth: 0,
     newFoldersLimit: 75,
     tokensUsed: 0,
@@ -71,7 +71,7 @@ export default function DashboardPage() {
         // Nouveaux indicateurs avec données réalistes
         permanentStorage: 673, // 673 Go utilisés sur 1000 Go
         permanentStorageLimit: 1000,
-        temporaryStorage: 45, // 45 Mo utilisés sur 100 Mo
+        temporaryStorage: 45, // 45 Go utilisés sur 100 Go
         temporaryStorageLimit: 100,
         newFoldersThisMonth: 23, // 23 nouveaux dossiers ce mois
         newFoldersLimit: 75,
@@ -200,7 +200,7 @@ export default function DashboardPage() {
           id: "notif_002",
           type: "warning",
           title: "Stockage temporaire élevé",
-          message: "45 Mo utilisés sur 100 Mo de stockage temporaire ce mois",
+          message: "45 Go utilisés sur 100 Go de stockage temporaire ce mois",
           time: "Il y a 2 heures",
           icon: AlertCircle,
           color: "text-orange-600",
@@ -357,7 +357,7 @@ export default function DashboardPage() {
             <Zap className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.temporaryStorage} Mo</div>
+            <div className="text-2xl font-bold">{stats.temporaryStorage} Go</div>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div
                 className={`h-2 rounded-full ${
@@ -371,7 +371,7 @@ export default function DashboardPage() {
               ></div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.temporaryStorage} Mo / {stats.temporaryStorageLimit} Mo ce mois
+              {stats.temporaryStorage} Go / {stats.temporaryStorageLimit} Go ce mois
             </p>
           </CardContent>
         </Card>

@@ -27,7 +27,7 @@ import {
 import { AuthModal } from "@/components/4nk/AuthModal"
 import { MessageBus } from "@/lib/4nk/MessageBus"
 import { UserStore } from "@/lib/4nk/UserStore"
-import { DebugInfo } from "@/components/4nk/DebugInfo"
+// DebugInfo supprimé
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -321,12 +321,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* Debug info en mode développement */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <DebugInfo />
-        </div>
-      )}
+      {/* Debug info retiré */}
     </div>
   )
 }
