@@ -1483,7 +1483,6 @@ export default function FoldersPage() {
                       />
                     </th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Nom</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Documents</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Taille</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Modifié</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Propriétaire</th>
@@ -1514,19 +1513,6 @@ export default function FoldersPage() {
                             </div>
                             <p className="text-sm text-gray-500 truncate max-w-xs">{folder.description}</p>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <FileText className="h-4 w-4" />
-                          <span>{folder.documentsCount}</span>
-                          {folder.subfoldersCount > 0 && (
-                            <>
-                              <span className="text-gray-400">•</span>
-                              <Folder className="h-4 w-4" />
-                              <span>{folder.subfoldersCount}</span>
-                            </>
-                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-gray-600">{folder.size}</td>

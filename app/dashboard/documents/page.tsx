@@ -2711,7 +2711,16 @@ export default function DocumentsPage() {
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={() => setActionModal({ type: null, document: null, documents: [] })}>Annuler</Button>
                     <Button onClick={confirmValidate}>Valider</Button>
-                    <Button variant="destructive" onClick={() => {/* logique de refus ici */}}>Refuser</Button>
+                    <Button variant="destructive" onClick={() => {
+                      if (!actionModal.documents || actionModal.documents.length === 0) return;
+                      setDocuments((prev) => prev.map((doc) =>
+                        actionModal.documents.some((d) => d.id === doc.id)
+                          ? { ...doc, isValidated: false, status: "rejected" }
+                          : doc
+                      ));
+                      showNotification("info", `${actionModal.documents.length} document(s) refusé(s)`);
+                      setActionModal({ type: null, document: null, documents: [] });
+                    }}>Refuser</Button>
                   </div>
                 </div>
               </>
