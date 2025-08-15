@@ -2710,7 +2710,7 @@ export default function DocumentsPage() {
                   <p>Souhaitez-vous valider ou refuser la sélection ?</p>
                   <div className="flex justify-end space-x-2">
                     <Button variant="outline" onClick={() => setActionModal({ type: null, document: null, documents: [] })}>Annuler</Button>
-                    <Button onClick={() => {/* logique de validation ici */}}>Valider</Button>
+                    <Button onClick={confirmValidate}>Valider</Button>
                     <Button variant="destructive" onClick={() => {/* logique de refus ici */}}>Refuser</Button>
                   </div>
                 </div>
