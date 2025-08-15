@@ -268,66 +268,8 @@ export default function DashboardPage() {
 
       {/* Statistiques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Documents</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalDocuments.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +12% ce mois
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dossiers</CardTitle>
-            <Folder className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalFolders}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +3 cette semaine
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Collaborateurs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +1 ce mois
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Jetons utilisés</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.tokensUsed}</div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full"
-                style={{ width: `${(stats.tokensUsed / stats.tokensTotal) * 100}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.tokensUsed} / {stats.tokensTotal} jetons
-            </p>
-          </CardContent>
-        </Card>
+        {/* SUPPRIMER les cartes Documents, Dossiers, Collaborateurs */}
+        {/* Conserver uniquement les autres indicateurs utiles (ex : Jetons utilisés, stockage, etc.) */}
       </div>
 
       {/* Nouveaux indicateurs de stockage */}
@@ -395,48 +337,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Actions rapides */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Plus className="h-5 w-5 mr-2" />
-            Actions rapides
-          </CardTitle>
-          <CardDescription>Accédez rapidement aux fonctionnalités principales</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/dashboard/documents">
-              <Button
-                variant="outline"
-                className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
-              >
-                <Upload className="h-6 w-6" />
-                <span>Télécharger un document</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/folders">
-              <Button
-                variant="outline"
-                className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
-              >
-                <Folder className="h-6 w-6" />
-                <span>Créer un dossier</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/search">
-              <Button
-                variant="outline"
-                className="w-full h-20 flex flex-col items-center justify-center space-y-2 bg-transparent"
-              >
-                <Search className="h-6 w-6" />
-                <span>Rechercher</span>
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Documents récents */}
@@ -510,38 +410,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            Notifications importantes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {notifications.map((notif) => (
-              <div key={notif.id} className={`p-4 rounded-lg ${notif.bgColor} border`}>
-                <div className="flex items-start space-x-3">
-                  <notif.icon className={`h-5 w-5 ${notif.color} mt-0.5`} />
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-gray-900">{notif.title}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
-                    <p className="text-xs text-gray-500 mt-2 flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {notif.time}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Sécurité */}
       <Card>

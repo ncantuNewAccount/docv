@@ -1281,81 +1281,6 @@ export default function FoldersPage() {
         ))}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-              <Folder className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Partagés</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.shared}</p>
-              </div>
-              <Share2 className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Privés</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.private}</p>
-              </div>
-              <Lock className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Cette semaine</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.thisWeek}</p>
-              </div>
-              <Clock className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Permanents</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.permanent}</p>
-              </div>
-              <Cloud className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Temporaires</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.temporary}</p>
-              </div>
-              <HardDrive className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Search and Filters */}
       <Card>
         <CardContent className="p-4">
@@ -1565,7 +1490,6 @@ export default function FoldersPage() {
 
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Accès</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Statut</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1586,11 +1510,6 @@ export default function FoldersPage() {
                             <div className="flex items-center space-x-2">
                               <span className="font-medium text-gray-900">{folder.name}</span>
                               {getStorageIcon(folder.storageType)}
-                              <button onClick={() => handleToggleFavorite(folder.id)}>
-                                <Star
-                                  className={`h-4 w-4 ${folder.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
-                                />
-                              </button>
                               {folder.access === "private" && <Lock className="h-4 w-4 text-gray-400" />}
                             </div>
                             <p className="text-sm text-gray-500 truncate max-w-xs">{folder.description}</p>
@@ -1629,7 +1548,6 @@ export default function FoldersPage() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(folder.status)}</td>
-
                     </tr>
                   ))}
                 </tbody>
@@ -1657,12 +1575,6 @@ export default function FoldersPage() {
                       className="absolute top-4 right-4 flex items-center space-x-1"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <button onClick={() => handleToggleFavorite(folder.id)}>
-                        <Star
-                          className={`h-4 w-4 ${folder.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
-                        />
-                      </button>
-                      {getStorageIcon(folder.storageType)}
                       {folder.access === "private" && <Lock className="h-4 w-4 text-gray-400" />}
                       {folder.storageType === "temporary" && (
                         <Button

@@ -600,10 +600,6 @@ export default function SearchPage() {
                   <Share2 className="h-4 w-4 mr-2" />
                   Partager
                 </Button>
-                <Button variant="outline" size="sm">
-                  <Star className="h-4 w-4 mr-2" />
-                  Favoris
-                </Button>
               </div>
             </div>
           </CardContent>

@@ -63,7 +63,6 @@ interface Document {
   folder: string
   folderId: string
   tags: string[]
-  favorite: boolean
   status: string
   thumbnail: string
   description?: string
@@ -102,6 +101,7 @@ interface ActionModal {
     | "archive"
     | "storage_config"
     | "import"
+    | "new_document"
     | null
   document: Document | null
   documents: Document[]
@@ -338,7 +338,6 @@ export default function DocumentsPage() {
           folder: "Contrats",
           folderId: "contracts",
           tags: ["contrat", "client", "juridique"],
-          favorite: false,
           status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PDF",
           description: "Contrat de prestation de services avec le client ABC Corp.",
@@ -369,7 +368,6 @@ export default function DocumentsPage() {
           folder: "Rapports",
           folderId: "reports",
           tags: ["rapport", "mensuel", "analyse"],
-          favorite: true,
           status: "pending",
           thumbnail: "/placeholder.svg?height=120&width=120&text=DOCX",
           description: "Rapport mensuel d'activité pour novembre 2024.",
@@ -405,7 +403,6 @@ export default function DocumentsPage() {
           folder: "Projets",
           folderId: "projects",
           tags: ["présentation", "projet", "alpha"],
-          favorite: false,
           status: "draft",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PPTX",
           description: "Présentation du projet Alpha pour le comité de direction.",
@@ -441,7 +438,6 @@ export default function DocumentsPage() {
           folder: "Finance",
           folderId: "finance",
           tags: ["budget", "2024", "finance"],
-          favorite: true,
           status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=XLSX",
           description: "Budget prévisionnel pour l'année 2024.",
@@ -472,7 +468,6 @@ export default function DocumentsPage() {
           folder: "Politiques",
           folderId: "policies",
           tags: ["sécurité", "politique", "règlement"],
-          favorite: false,
           status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PDF",
           description: "Politique de sécurité informatique de l'entreprise.",
@@ -503,7 +498,6 @@ export default function DocumentsPage() {
           folder: "Formation",
           folderId: "training",
           tags: ["formation", "vidéo", "équipe"],
-          favorite: false,
           status: "draft",
           thumbnail: "/placeholder.svg?height=120&width=120&text=MP4",
           description: "Vidéo de formation pour la nouvelle équipe.",
@@ -539,7 +533,6 @@ export default function DocumentsPage() {
           folder: "Assets",
           folderId: "assets",
           tags: ["logo", "design", "branding"],
-          favorite: true,
           status: "validated",
           thumbnail: "/placeholder.svg?height=120&width=120&text=PNG",
           description: "Logo officiel de l'entreprise en haute résolution.",
@@ -575,7 +568,6 @@ export default function DocumentsPage() {
           folder: "Archives",
           folderId: "archives",
           tags: ["archive", "2023", "backup"],
-          favorite: false,
           status: "archived",
           thumbnail: "/placeholder.svg?height=120&width=120&text=ZIP",
           description: "Archive complète des documents de l'année 2023.",
@@ -708,10 +700,10 @@ export default function DocumentsPage() {
     setActionModal({ type: "archive", document: doc, documents: [] })
   }
 
-  const handleRequestDocument = () => {
+  const handleRequestDocument = (selectedDocs: Document[]) => {
     setRequestDocumentName("")
     setRequestMessage("")
-    setActionModal({ type: "request", document: null, documents: [] })
+    setActionModal({ type: "request", document: null, documents: selectedDocs })
   }
 
   const handleImportDocuments = () => {
@@ -721,9 +713,14 @@ export default function DocumentsPage() {
     setActionModal({ type: "import", document: null, documents: [] })
   }
 
-  const handleValidateDocument = (doc: Document) => {
-    setActionModal({ type: "validate", document: doc, documents: [] })
-  }
+  const handleValidateDocuments = (docIds: number[]) => {
+    if (!docIds || docIds.length === 0) return;
+    // Ouvre le modal de validation pour le premier document sélectionné (ou gérer en bulk si besoin)
+    const doc = documents.find((d) => d.id === docIds[0]);
+    if (doc) {
+      setActionModal({ type: "validate", document: doc, documents: docIds.map(id => documents.find(d => d.id === id)).filter(Boolean) });
+    }
+  };
 
   const handleViewCertificate = (doc: Document) => {
     if (doc.hasCertificate) {
@@ -1214,7 +1211,6 @@ export default function DocumentsPage() {
         folder: importFolder,
         folderId: folders.find((f) => f.name === importFolder)?.id || "general",
         tags: [],
-        favorite: false,
         status: "draft",
         thumbnail: `/placeholder.svg?height=120&width=120&text=${file.name.split(".").pop()?.toUpperCase()}`,
         description: importDescription || `Document importé : ${file.name}`,
@@ -1260,26 +1256,16 @@ export default function DocumentsPage() {
     setActionModal({ type: null, document: null, documents: [] })
   }
 
-  const confirmValidation = (isValid: boolean) => {
-    if (actionModal.document) {
-      const updatedDoc = {
-        ...actionModal.document,
-        isValidated: isValid,
-        status: isValid ? "validated" : "rejected",
-        hasCertificate: isValid,
-      }
-      setDocuments((prev) => prev.map((doc) => (doc.id === updatedDoc.id ? updatedDoc : doc)))
-      showNotification("success", `${actionModal.document.name} ${isValid ? "validé" : "invalidé"}`)
-
-      sendFolderChatNotification(
-        actionModal.document.folderId,
-        `${isValid ? "✅" : "❌"} ${actionModal.document.name} a été ${isValid ? "validé" : "invalidé"}`,
-        isValid ? "validate" : "invalidate",
-        actionModal.document.name,
-      )
-    }
-    setActionModal({ type: null, document: null, documents: [] })
-  }
+  const confirmValidate = () => {
+    if (!actionModal.documents || actionModal.documents.length === 0) return;
+    setDocuments((prev) => prev.map((doc) =>
+      actionModal.documents.some((d) => d.id === doc.id)
+        ? { ...doc, isValidated: true, status: "validated", storageType: "permanent" }
+        : doc
+    ));
+    showNotification("success", `${actionModal.documents.length} document(s) validé(s) et déplacé(s) en permanent`);
+    setActionModal({ type: null, document: null, documents: [] });
+  };
 
   const confirmArchive = () => {
     if (actionModal.document) {
@@ -1511,6 +1497,22 @@ export default function DocumentsPage() {
     }
   }
 
+  const handleMoveDocuments = (docIds: number[]) => {
+    if (!docIds || docIds.length === 0) return;
+    const docs = docIds.map(id => documents.find(d => d.id === id)).filter(Boolean);
+    setNewFolderName("");
+    setActionModal({ type: "move", document: docs[0], documents: docs });
+  };
+
+  const handleChangeStorage = (docIds: number[]) => {
+    if (!docIds || docIds.length === 0) return;
+    const docs = docIds.map(id => documents.find(d => d.id === id)).filter(Boolean);
+    setStorageDuration("30");
+    setDataUsage("");
+    setThirdPartyAccess("");
+    setActionModal({ type: "storage_config", document: docs[0], documents: docs });
+  };
+
   return (
     <div className="space-y-6">
       {/* Notification */}
@@ -1574,81 +1576,6 @@ export default function DocumentsPage() {
             Nouveau document
           </Button>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Cette semaine</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.thisWeek}</p>
-              </div>
-              <Clock className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Validés</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.validated}</p>
-              </div>
-              <ShieldCheck className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Favoris</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.favorites}</p>
-              </div>
-              <Star className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Permanents</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.permanent}</p>
-              </div>
-              <Cloud className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Temporaires</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.temporary}</p>
-              </div>
-              <HardDrive className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search and Filters */}
@@ -1832,6 +1759,61 @@ export default function DocumentsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    const docsToDownload = documents.filter((d) => selectedDocuments.includes(d.id))
+                    if (docsToDownload.length === 0) {
+                      showNotification("info", "Aucun document à télécharger pour la sélection")
+                      return
+                    }
+                    docsToDownload.forEach((d) => handleDownloadDocument(d))
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Télécharger
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleRequestDocument(selectedDocuments)
+                  }}
+                >
+                  <FileQuestion className="h-4 w-4 mr-2" />
+                  Demander
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleValidateDocuments(selectedDocuments)
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Valider
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleMoveDocuments(selectedDocuments)
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Déplacer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleChangeStorage(selectedDocuments)
+                  }}
+                >
+                  <HardDrive className="h-4 w-4 mr-2" />
+                  Changer de storage
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
                     const docsToDownload = documents.filter((d) => selectedDocuments.includes(d.id) && d.hasCertificate)
                     if (docsToDownload.length === 0) {
                       showNotification("info", "Aucun certificat à télécharger pour la sélection")
@@ -1885,7 +1867,6 @@ export default function DocumentsPage() {
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Dossier</th>
 
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Statut</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-900">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1903,11 +1884,6 @@ export default function DocumentsPage() {
                           <div className="flex items-center space-x-2">
                             <span className="font-medium text-gray-900">{doc.name}</span>
                             {getStorageIcon(doc.storageType)}
-                            <button onClick={() => handleToggleFavorite(doc.id)}>
-                              <Star
-                                className={`h-4 w-4 ${doc.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
-                              />
-                            </button>
                             {doc.isValidated && <ShieldCheck className="h-4 w-4 text-green-600" />}
                             {doc.temporaryStorageConfig && (
                               <AlertTriangle
@@ -1924,7 +1900,6 @@ export default function DocumentsPage() {
                       <td className="py-3 px-4 text-gray-600">{doc.folder}</td>
 
                       <td className="py-3 px-4">{getStatusBadge(doc.status, doc.isValidated)}</td>
-
                     </tr>
                   ))}
                 </tbody>
@@ -1947,11 +1922,6 @@ export default function DocumentsPage() {
                       />
                     </div>
                     <div className="absolute top-2 right-2 flex items-center space-x-1">
-                      <button onClick={() => handleToggleFavorite(doc.id)}>
-                        <Star
-                          className={`h-4 w-4 ${doc.favorite ? "text-yellow-500 fill-current" : "text-gray-300"} hover:text-yellow-500`}
-                        />
-                      </button>
                       {getStorageIcon(doc.storageType)}
                       {doc.isValidated && <ShieldCheck className="h-4 w-4 text-green-600" />}
                       {doc.temporaryStorageConfig && (
@@ -2693,6 +2663,55 @@ export default function DocumentsPage() {
                       <ShieldCheck className="h-4 w-4 mr-2" />
                       Vérifier en ligne
                     </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Move Modal */}
+            {actionModal.type === "move" && actionModal.documents.length > 0 && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Déplacer le(s) document(s)</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setActionModal({ type: null, document: null, documents: [] })}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="moveFolder" className="text-sm font-medium text-gray-700">Dossier de destination</Label>
+                  <Select id="moveFolder" value={newFolderName} onValueChange={setNewFolderName}>
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue placeholder="Choisir un dossier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {folders.map((f) => (
+                        <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setActionModal({ type: null, document: null, documents: [] })}>Annuler</Button>
+                    <Button onClick={confirmMove} disabled={!newFolderName}>Déplacer</Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Validate Modal */}
+            {actionModal.type === "validate" && actionModal.documents.length > 0 && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Valider le(s) document(s)</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setActionModal({ type: null, document: null, documents: [] })}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <p>Souhaitez-vous valider ou refuser la sélection ?</p>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setActionModal({ type: null, document: null, documents: [] })}>Annuler</Button>
+                    <Button onClick={() => {/* logique de validation ici */}}>Valider</Button>
+                    <Button variant="destructive" onClick={() => {/* logique de refus ici */}}>Refuser</Button>
                   </div>
                 </div>
               </>
